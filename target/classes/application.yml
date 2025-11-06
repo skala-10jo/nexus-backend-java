@@ -1,9 +1,9 @@
 spring:
   application:
-    name: langapp-backend
+    name: nexus-backend
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/langapp
+    url: jdbc:postgresql://localhost:5432/nexus
     username: kihoon
     password:
     driver-class-name: org.postgresql.Driver

@@ -12,11 +12,11 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.langapp</groupId>
-    <artifactId>langapp-backend</artifactId>
+    <groupId>com.nexus</groupId>
+    <artifactId>nexus-backend</artifactId>
     <version>1.0.0</version>
-    <name>langapp-backend</name>
-    <description>Backend API for Language Learning Platform</description>
+    <name>nexus-backend</name>
+    <description>Backend API for NEXUS</description>
 
     <properties>
         <java.version>17</java.version>

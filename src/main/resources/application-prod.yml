@@ -1,0 +1,17 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate  # Never auto-update schema in production
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+server:
+  error:
+    include-message: never  # Don't expose error details
+    include-stacktrace: never  # Don't expose stack traces
+
+# Production-specific settings
+# All sensitive values MUST come from environment variables
+# SSL/TLS should be configured at reverse proxy level (nginx/AWS ALB)
