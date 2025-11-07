@@ -47,3 +47,7 @@ cors:
 file:
   upload-dir: ${FILE_UPLOAD_DIR:uploads/documents}
   max-size: ${FILE_MAX_SIZE:52428800}  # 50MB in bytes
+
+python:
+  backend:
+    url: ${PYTHON_BACKEND_URL:http://localhost:8000}

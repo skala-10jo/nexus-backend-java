@@ -29,6 +29,10 @@ public class Document {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id")
+    private Project project;
+
     @Column(name = "original_filename", nullable = false, length = 255)
     private String originalFilename;
 

@@ -64,7 +64,7 @@ public class DocumentService {
                     .fileType(fileType)
                     .mimeType(mimeType)
                     .uploadDate(LocalDateTime.now())
-                    .status(DocumentStatus.UPLOADED)
+                    .status(DocumentStatus.READY)  // Changed from UPLOADED to READY
                     .isAnalyzed(false)
                     .build();
 
