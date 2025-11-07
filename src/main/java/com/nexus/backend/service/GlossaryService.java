@@ -227,4 +227,21 @@ public class GlossaryService {
 
         return GlossaryTermResponse.from(term);
     }
+
+    @Transactional
+    public GlossaryTermResponse unverifyTerm(UUID termId, User user) {
+        GlossaryTerm term = glossaryTermRepository.findByIdAndUserId(termId, user.getId())
+                .orElseThrow(() -> new RuntimeException("Glossary term not found"));
+
+        term.setIsVerified(false);
+        // Restore status based on original source
+        if ("USER_VERIFIED".equals(term.getStatus()) || "USER_EDITED".equals(term.getStatus())) {
+            term.setStatus("EXTRACTED");
+        }
+
+        term = glossaryTermRepository.save(term);
+        log.info("Unverified glossary term: {}", termId);
+
+        return GlossaryTermResponse.from(term);
+    }
 }

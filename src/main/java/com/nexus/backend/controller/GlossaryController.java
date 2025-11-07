@@ -159,4 +159,16 @@ public class GlossaryController {
         GlossaryTermResponse term = glossaryService.verifyTerm(id, user);
         return ResponseEntity.ok(term);
     }
+
+    /**
+     * Unverify glossary term
+     */
+    @PutMapping("/{id}/unverify")
+    public ResponseEntity<GlossaryTermResponse> unverifyTerm(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal User user) {
+        log.info("Unverifying glossary term: {} for user: {}", id, user.getId());
+        GlossaryTermResponse term = glossaryService.unverifyTerm(id, user);
+        return ResponseEntity.ok(term);
+    }
 }
