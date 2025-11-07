@@ -137,6 +137,18 @@ public class GlossaryController {
     }
 
     /**
+     * Delete multiple glossary terms
+     */
+    @DeleteMapping("/batch")
+    public ResponseEntity<Void> deleteTerms(
+            @RequestBody java.util.List<UUID> termIds,
+            @AuthenticationPrincipal User user) {
+        log.info("Deleting {} glossary terms for user: {}", termIds.size(), user.getId());
+        glossaryService.deleteTerms(termIds, user);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
      * Verify glossary term
      */
     @PutMapping("/{id}/verify")

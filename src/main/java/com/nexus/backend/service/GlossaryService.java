@@ -197,6 +197,24 @@ public class GlossaryService {
     }
 
     @Transactional
+    public void deleteTerms(java.util.List<UUID> termIds, User user) {
+        log.info("Deleting {} terms for user: {}", termIds.size(), user.getId());
+
+        for (UUID termId : termIds) {
+            try {
+                GlossaryTerm term = glossaryTermRepository.findByIdAndUserId(termId, user.getId())
+                        .orElseThrow(() -> new RuntimeException("Glossary term not found: " + termId));
+                glossaryTermRepository.delete(term);
+            } catch (Exception e) {
+                log.error("Failed to delete term {}: {}", termId, e.getMessage());
+                // Continue with other deletions
+            }
+        }
+
+        log.info("Completed batch deletion of glossary terms");
+    }
+
+    @Transactional
     public GlossaryTermResponse verifyTerm(UUID termId, User user) {
         GlossaryTerm term = glossaryTermRepository.findByIdAndUserId(termId, user.getId())
                 .orElseThrow(() -> new RuntimeException("Glossary term not found"));

@@ -34,7 +34,7 @@ public class GlossaryTermResponse {
     public static GlossaryTermResponse from(GlossaryTerm term) {
         return GlossaryTermResponse.builder()
                 .id(term.getId())
-                .projectId(term.getProject().getId())
+                .projectId(term.getProject() != null ? term.getProject().getId() : null)
                 .koreanTerm(term.getKoreanTerm())
                 .englishTerm(term.getEnglishTerm())
                 .abbreviation(term.getAbbreviation())
