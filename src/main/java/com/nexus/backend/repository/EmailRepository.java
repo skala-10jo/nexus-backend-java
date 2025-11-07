@@ -1,0 +1,66 @@
+package com.nexus.backend.repository;
+
+import com.nexus.backend.entity.Email;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+@Repository
+public interface EmailRepository extends JpaRepository<Email, UUID> {
+
+    // Find by message ID (unique Microsoft Graph ID)
+    Optional<Email> findByMessageId(String messageId);
+
+    boolean existsByMessageId(String messageId);
+
+    // Find by user
+    Page<Email> findByUserId(UUID userId, Pageable pageable);
+
+    List<Email> findByUserId(UUID userId);
+
+    Optional<Email> findByIdAndUserId(UUID id, UUID userId);
+
+    // Find by project
+    Page<Email> findByProjectId(UUID projectId, Pageable pageable);
+
+    Page<Email> findByUserIdAndProjectId(UUID userId, UUID projectId, Pageable pageable);
+
+    // Find by folder
+    Page<Email> findByUserIdAndFolder(UUID userId, String folder, Pageable pageable);
+
+    // Find unread emails
+    Page<Email> findByUserIdAndIsRead(UUID userId, Boolean isRead, Pageable pageable);
+
+    // Count unread emails
+    long countByUserIdAndIsRead(UUID userId, Boolean isRead);
+
+    // Search emails
+    @Query("SELECT e FROM Email e WHERE e.user.id = :userId AND " +
+           "(LOWER(e.subject) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(e.fromAddress) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(e.fromName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(e.body) LIKE LOWER(CONCAT('%', :query, '%')))")
+    Page<Email> searchEmails(@Param("userId") UUID userId,
+                             @Param("query") String query,
+                             Pageable pageable);
+
+    // Advanced search with folder and project filters
+    @Query("SELECT e FROM Email e WHERE e.user.id = :userId " +
+           "AND (:folder IS NULL OR e.folder = :folder) " +
+           "AND (:projectId IS NULL OR e.project.id = :projectId) " +
+           "AND (LOWER(e.subject) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(e.fromAddress) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(e.fromName) LIKE LOWER(CONCAT('%', :query, '%')))")
+    Page<Email> advancedSearch(@Param("userId") UUID userId,
+                               @Param("query") String query,
+                               @Param("folder") String folder,
+                               @Param("projectId") UUID projectId,
+                               Pageable pageable);
+}
