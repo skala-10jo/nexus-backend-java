@@ -8,7 +8,9 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Data
 @Builder
@@ -30,8 +32,27 @@ public class GlossaryTermResponse {
     private Integer usageCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private List<DocumentInfo> documents;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class DocumentInfo {
+        private UUID id;
+        private String originalFilename;
+    }
 
     public static GlossaryTermResponse from(GlossaryTerm term) {
+        List<DocumentInfo> documentInfos = term.getDocuments() != null
+            ? term.getDocuments().stream()
+                .map(doc -> DocumentInfo.builder()
+                    .id(doc.getId())
+                    .originalFilename(doc.getOriginalFilename())
+                    .build())
+                .collect(Collectors.toList())
+            : List.of();
+
         return GlossaryTermResponse.builder()
                 .id(term.getId())
                 .projectId(term.getProject() != null ? term.getProject().getId() : null)
@@ -47,6 +68,7 @@ public class GlossaryTermResponse {
                 .usageCount(term.getUsageCount())
                 .createdAt(term.getCreatedAt())
                 .updatedAt(term.getUpdatedAt())
+                .documents(documentInfos)
                 .build();
     }
 }

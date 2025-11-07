@@ -62,10 +62,10 @@ public class GlossaryTerm {
     private BigDecimal confidenceScore;
 
     @Column(nullable = false, length = 20)
-    private String status = "AUTO_EXTRACTED";  // AUTO_EXTRACTED, USER_VERIFIED, USER_EDITED, USER_ADDED
+    private String status = "AUTO_EXTRACTED";  // AUTO_EXTRACTED, USER_ADDED, USER_EDITED (data source)
 
     @Column(name = "is_verified")
-    private Boolean isVerified = false;
+    private Boolean isVerified = false;  // Verification state (independent from status)
 
     @Column(name = "usage_count")
     @Builder.Default
