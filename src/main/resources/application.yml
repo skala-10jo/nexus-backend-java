@@ -19,6 +19,14 @@ spring:
       hibernate:
         format_sql: ${JPA_FORMAT_SQL:false}
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          time_zone: UTC
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 50MB
+      max-request-size: 50MB
 
 server:
   port: ${SERVER_PORT:3000}
@@ -35,3 +43,7 @@ cors:
   allowed-methods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,DELETE,OPTIONS}
   allowed-headers: ${CORS_ALLOWED_HEADERS:*}
   allow-credentials: ${CORS_ALLOW_CREDENTIALS:true}
+
+file:
+  upload-dir: ${FILE_UPLOAD_DIR:uploads/documents}
+  max-size: ${FILE_MAX_SIZE:52428800}  # 50MB in bytes
