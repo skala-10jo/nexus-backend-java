@@ -18,9 +18,9 @@ public class ProjectResponse {
     private UUID id;
     private String name;
     private String description;
-    private String sourceLanguage;
-    private String targetLanguage;
     private String status;
+    private Integer documentCount;
+    private Integer termCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -29,9 +29,9 @@ public class ProjectResponse {
                 .id(project.getId())
                 .name(project.getName())
                 .description(project.getDescription())
-                .sourceLanguage(project.getSourceLanguage())
-                .targetLanguage(project.getTargetLanguage())
                 .status(project.getStatus())
+                .documentCount(project.getDocuments() != null ? project.getDocuments().size() : 0)
+                .termCount(project.getGlossaryTerms() != null ? project.getGlossaryTerms().size() : 0)
                 .createdAt(project.getCreatedAt())
                 .updatedAt(project.getUpdatedAt())
                 .build();

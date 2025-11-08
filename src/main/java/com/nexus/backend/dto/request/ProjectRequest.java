@@ -3,6 +3,9 @@ package com.nexus.backend.dto.request;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+import java.util.List;
+import java.util.UUID;
+
 @Data
 public class ProjectRequest {
 
@@ -11,9 +14,5 @@ public class ProjectRequest {
 
     private String description;
 
-    @NotBlank(message = "Source language is required")
-    private String sourceLanguage;
-
-    @NotBlank(message = "Target language is required")
-    private String targetLanguage;
+    private List<UUID> documentIds;
 }

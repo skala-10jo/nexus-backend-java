@@ -2,14 +2,17 @@ package com.nexus.backend.service;
 
 import com.nexus.backend.dto.request.ProjectRequest;
 import com.nexus.backend.dto.response.ProjectResponse;
+import com.nexus.backend.entity.Document;
 import com.nexus.backend.entity.Project;
 import com.nexus.backend.entity.User;
+import com.nexus.backend.repository.DocumentRepository;
 import com.nexus.backend.repository.ProjectRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -20,6 +23,7 @@ import java.util.stream.Collectors;
 public class ProjectService {
 
     private final ProjectRepository projectRepository;
+    private final DocumentRepository documentRepository;
 
     @Transactional(readOnly = true)
     public List<ProjectResponse> getUserProjects(User user) {
@@ -39,17 +43,30 @@ public class ProjectService {
 
     @Transactional
     public ProjectResponse createProject(ProjectRequest request, User user) {
+        // Build project
         Project project = Project.builder()
                 .user(user)
                 .name(request.getName())
                 .description(request.getDescription())
-                .sourceLanguage(request.getSourceLanguage())
-                .targetLanguage(request.getTargetLanguage())
                 .status("ACTIVE")
+                .documents(new ArrayList<>())
                 .build();
 
+        // Add documents if documentIds provided
+        if (request.getDocumentIds() != null && !request.getDocumentIds().isEmpty()) {
+            List<Document> documents = documentRepository.findAllById(request.getDocumentIds());
+            // Verify all documents belong to the user
+            documents.forEach(doc -> {
+                if (!doc.getUser().getId().equals(user.getId())) {
+                    throw new RuntimeException("Document does not belong to user");
+                }
+            });
+            project.getDocuments().addAll(documents);
+        }
+
         project = projectRepository.save(project);
-        log.info("Created project: {} for user: {}", project.getId(), user.getId());
+        log.info("Created project: {} for user: {} with {} documents",
+                project.getId(), user.getId(), project.getDocuments().size());
 
         return ProjectResponse.from(project);
     }
@@ -61,11 +78,25 @@ public class ProjectService {
 
         project.setName(request.getName());
         project.setDescription(request.getDescription());
-        project.setSourceLanguage(request.getSourceLanguage());
-        project.setTargetLanguage(request.getTargetLanguage());
+
+        // Update documents if documentIds provided
+        if (request.getDocumentIds() != null) {
+            project.getDocuments().clear();
+            if (!request.getDocumentIds().isEmpty()) {
+                List<Document> documents = documentRepository.findAllById(request.getDocumentIds());
+                // Verify all documents belong to the user
+                documents.forEach(doc -> {
+                    if (!doc.getUser().getId().equals(user.getId())) {
+                        throw new RuntimeException("Document does not belong to user");
+                    }
+                });
+                project.getDocuments().addAll(documents);
+            }
+        }
 
         project = projectRepository.save(project);
-        log.info("Updated project: {}", project.getId());
+        log.info("Updated project: {} with {} documents",
+                project.getId(), project.getDocuments().size());
 
         return ProjectResponse.from(project);
     }

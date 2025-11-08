@@ -29,9 +29,8 @@ public class Document {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "project_id")
-    private Project project;
+    @ManyToMany(mappedBy = "documents")
+    private List<Project> projects = new ArrayList<>();
 
     @Column(name = "original_filename", nullable = false, length = 255)
     private String originalFilename;

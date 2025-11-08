@@ -76,12 +76,18 @@ public class GlossaryService {
             try {
                 String pythonUrl = pythonBackendUrl + "/api/ai/glossary/extract";
 
+                // Get first project if document has projects
+                UUID projectId = null;
+                if (document.getProjects() != null && !document.getProjects().isEmpty()) {
+                    projectId = document.getProjects().get(0).getId();
+                }
+
                 PythonExtractionRequest request = PythonExtractionRequest.builder()
                         .jobId(savedJob.getId())
                         .documentId(documentId)
                         .filePath(document.getFilePath())
                         .userId(user.getId())
-                        .projectId(document.getProject() != null ? document.getProject().getId() : null)
+                        .projectId(projectId)
                         .build();
 
                 log.info("Calling Python API: {}", pythonUrl);

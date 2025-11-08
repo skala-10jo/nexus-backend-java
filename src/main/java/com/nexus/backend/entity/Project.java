@@ -35,16 +35,15 @@ public class Project {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "source_language", nullable = false, length = 10)
-    private String sourceLanguage;
-
-    @Column(name = "target_language", nullable = false, length = 10)
-    private String targetLanguage;
-
     @Column(nullable = false, length = 20)
     private String status = "ACTIVE";  // ACTIVE, ARCHIVED, DELETED
 
-    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ManyToMany
+    @JoinTable(
+        name = "project_documents",
+        joinColumns = @JoinColumn(name = "project_id"),
+        inverseJoinColumns = @JoinColumn(name = "document_id")
+    )
     @Builder.Default
     private List<Document> documents = new ArrayList<>();
 
