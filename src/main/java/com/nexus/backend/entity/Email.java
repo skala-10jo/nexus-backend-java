@@ -13,7 +13,9 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "emails")
+@Table(name = "emails", uniqueConstraints = {
+    @UniqueConstraint(columnNames = {"message_id", "user_id"})
+})
 @Data
 @Builder
 @NoArgsConstructor
@@ -32,7 +34,7 @@ public class Email {
     @JoinColumn(name = "project_id")
     private Project project;
 
-    @Column(name = "message_id", unique = true, nullable = false)
+    @Column(name = "message_id", nullable = false)
     private String messageId;
 
     @Column(nullable = false, length = 500)

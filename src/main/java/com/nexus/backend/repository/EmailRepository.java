@@ -20,12 +20,18 @@ public interface EmailRepository extends JpaRepository<Email, UUID> {
 
     boolean existsByMessageId(String messageId);
 
+    // Check if email exists for specific user
+    boolean existsByMessageIdAndUserId(String messageId, UUID userId);
+
     // Find by user
     Page<Email> findByUserId(UUID userId, Pageable pageable);
 
     List<Email> findByUserId(UUID userId);
 
     Optional<Email> findByIdAndUserId(UUID id, UUID userId);
+
+    // Delete all emails by user
+    void deleteByUserId(UUID userId);
 
     // Find by project
     Page<Email> findByProjectId(UUID projectId, Pageable pageable);

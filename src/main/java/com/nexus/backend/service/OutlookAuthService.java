@@ -5,6 +5,7 @@ import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.nexus.backend.dto.response.DeviceCodeResponse;
 import com.nexus.backend.dto.response.OutlookAuthStatusResponse;
 import com.nexus.backend.entity.User;
+import com.nexus.backend.repository.EmailRepository;
 import com.nexus.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ import java.util.function.Consumer;
 public class OutlookAuthService {
 
     private final UserRepository userRepository;
+    private final EmailRepository emailRepository;
 
     @Value("${GRAPH_CLIENT_ID:}")
     private String clientId;
@@ -214,6 +216,11 @@ public class OutlookAuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        // Delete all emails for this user
+        emailRepository.deleteByUserId(userId);
+        log.info("Deleted all emails for user: {}", userId);
+
+        // Clear Outlook authentication data
         user.setOutlookEmail(null);
         user.setOutlookAccessToken(null);
         user.setOutlookRefreshToken(null);

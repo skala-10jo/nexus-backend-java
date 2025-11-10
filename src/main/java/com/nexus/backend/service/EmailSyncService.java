@@ -98,9 +98,9 @@ public class EmailSyncService {
             log.info("Retrieved {} messages from folder: {}", totalCount, folderName);
 
             for (com.microsoft.graph.models.Message graphMessage : messagesResponse.getValue()) {
-                // 이미 존재하는 메일인지 확인
-                if (emailRepository.existsByMessageId(graphMessage.getId())) {
-                    log.debug("Email already exists: {} (folder: {})", graphMessage.getId(), folderName);
+                // 이미 존재하는 메일인지 확인 (해당 사용자의 메일만)
+                if (emailRepository.existsByMessageIdAndUserId(graphMessage.getId(), user.getId())) {
+                    log.debug("Email already exists for user: {} (folder: {})", graphMessage.getId(), folderName);
                     skippedCount++;
                     continue;
                 }
