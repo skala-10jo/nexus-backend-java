@@ -57,3 +57,10 @@ file:
 python:
   backend:
     url: ${PYTHON_BACKEND_URL:http://localhost:8000}
+
+logging:
+  level:
+    com.nexus.backend: INFO
+    com.nexus.backend.service.EmailSyncService: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE

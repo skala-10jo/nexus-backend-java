@@ -38,6 +38,22 @@ public class User {
     @Column(name = "avatar_url")
     private String avatarUrl;
 
+    // Outlook integration fields
+    @Column(name = "outlook_email")
+    private String outlookEmail;
+
+    @Column(name = "outlook_access_token", columnDefinition = "TEXT")
+    private String outlookAccessToken;
+
+    @Column(name = "outlook_refresh_token", columnDefinition = "TEXT")
+    private String outlookRefreshToken;
+
+    @Column(name = "outlook_token_expires_at")
+    private LocalDateTime outlookTokenExpiresAt;
+
+    @Column(name = "outlook_delta_link", columnDefinition = "TEXT")
+    private String outlookDeltaLink; // For incremental sync
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
