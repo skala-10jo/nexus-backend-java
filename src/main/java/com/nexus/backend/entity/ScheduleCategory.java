@@ -14,12 +14,18 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "projects")
+@Table(
+    name = "schedule_categories",
+    uniqueConstraints = @UniqueConstraint(
+        name = "schedule_categories_user_name_unique",
+        columnNames = {"user_id", "name"}
+    )
+)
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Project {
+public class ScheduleCategory {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -29,27 +35,29 @@ public class Project {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false, length = 50)
     private String name;
+
+    @Column(nullable = false, length = 20)
+    private String color;
+
+    @Column(length = 50)
+    private String icon;
 
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(nullable = false, length = 20)
-    private String status = "ACTIVE";  // ACTIVE, ARCHIVED, DELETED
-
-    @ManyToMany
-    @JoinTable(
-        name = "project_documents",
-        joinColumns = @JoinColumn(name = "project_id"),
-        inverseJoinColumns = @JoinColumn(name = "document_id")
-    )
+    @Column(name = "is_default")
     @Builder.Default
-    private List<Document> documents = new ArrayList<>();
+    private Boolean isDefault = false;
 
-    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Column(name = "display_order")
     @Builder.Default
-    private List<GlossaryTerm> glossaryTerms = new ArrayList<>();
+    private Integer displayOrder = 0;
+
+    @ManyToMany(mappedBy = "categories")
+    @Builder.Default
+    private List<Schedule> schedules = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

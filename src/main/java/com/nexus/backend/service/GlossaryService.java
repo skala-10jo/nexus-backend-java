@@ -54,6 +54,7 @@ public class GlossaryService {
             }
             // Delete old FAILED or COMPLETED job to allow re-extraction
             extractionJobRepository.delete(existingJob.get());
+            extractionJobRepository.flush(); // Force immediate deletion before creating new job
             log.info("Deleted old extraction job (status: {}) for document: {}", status, documentId);
         }
 
@@ -75,12 +76,18 @@ public class GlossaryService {
             try {
                 String pythonUrl = pythonBackendUrl + "/api/ai/glossary/extract";
 
+                // Get first project if document has projects
+                UUID projectId = null;
+                if (document.getProjects() != null && !document.getProjects().isEmpty()) {
+                    projectId = document.getProjects().get(0).getId();
+                }
+
                 PythonExtractionRequest request = PythonExtractionRequest.builder()
                         .jobId(savedJob.getId())
                         .documentId(documentId)
                         .filePath(document.getFilePath())
                         .userId(user.getId())
-                        .projectId(document.getProject() != null ? document.getProject().getId() : null)
+                        .projectId(projectId)
                         .build();
 
                 log.info("Calling Python API: {}", pythonUrl);
@@ -220,7 +227,7 @@ public class GlossaryService {
                 .orElseThrow(() -> new RuntimeException("Glossary term not found"));
 
         term.setIsVerified(true);
-        term.setStatus("USER_VERIFIED");
+        // Don't change status - it represents data source, not verification state
 
         term = glossaryTermRepository.save(term);
         log.info("Verified glossary term: {}", termId);
@@ -234,10 +241,7 @@ public class GlossaryService {
                 .orElseThrow(() -> new RuntimeException("Glossary term not found"));
 
         term.setIsVerified(false);
-        // Restore status based on original source
-        if ("USER_VERIFIED".equals(term.getStatus()) || "USER_EDITED".equals(term.getStatus())) {
-            term.setStatus("EXTRACTED");
-        }
+        // Don't change status - it represents data source, not verification state
 
         term = glossaryTermRepository.save(term);
         log.info("Unverified glossary term: {}", termId);

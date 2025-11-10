@@ -1,6 +1,7 @@
 package com.nexus.backend.controller;
 
 import com.nexus.backend.dto.request.ProjectRequest;
+import com.nexus.backend.dto.response.ApiResponse;
 import com.nexus.backend.dto.response.ProjectResponse;
 import com.nexus.backend.entity.User;
 import com.nexus.backend.service.ProjectService;
@@ -25,59 +26,59 @@ public class ProjectController {
      * Get all projects for current user
      */
     @GetMapping
-    public ResponseEntity<List<ProjectResponse>> getUserProjects(
+    public ResponseEntity<ApiResponse<List<ProjectResponse>>> getUserProjects(
             @AuthenticationPrincipal User user) {
         log.info("Getting projects for user: {}", user.getId());
         List<ProjectResponse> projects = projectService.getUserProjects(user);
-        return ResponseEntity.ok(projects);
+        return ResponseEntity.ok(ApiResponse.success(projects));
     }
 
     /**
      * Get project detail
      */
     @GetMapping("/{id}")
-    public ResponseEntity<ProjectResponse> getProject(
+    public ResponseEntity<ApiResponse<ProjectResponse>> getProject(
             @PathVariable UUID id,
             @AuthenticationPrincipal User user) {
         log.info("Getting project: {} for user: {}", id, user.getId());
         ProjectResponse project = projectService.getProject(id, user);
-        return ResponseEntity.ok(project);
+        return ResponseEntity.ok(ApiResponse.success(project));
     }
 
     /**
      * Create new project
      */
     @PostMapping
-    public ResponseEntity<ProjectResponse> createProject(
+    public ResponseEntity<ApiResponse<ProjectResponse>> createProject(
             @RequestBody ProjectRequest request,
             @AuthenticationPrincipal User user) {
         log.info("Creating project for user: {}", user.getId());
         ProjectResponse project = projectService.createProject(request, user);
-        return ResponseEntity.ok(project);
+        return ResponseEntity.ok(ApiResponse.success("프로젝트가 생성되었습니다.", project));
     }
 
     /**
      * Update project
      */
     @PutMapping("/{id}")
-    public ResponseEntity<ProjectResponse> updateProject(
+    public ResponseEntity<ApiResponse<ProjectResponse>> updateProject(
             @PathVariable UUID id,
             @RequestBody ProjectRequest request,
             @AuthenticationPrincipal User user) {
         log.info("Updating project: {} for user: {}", id, user.getId());
         ProjectResponse project = projectService.updateProject(id, request, user);
-        return ResponseEntity.ok(project);
+        return ResponseEntity.ok(ApiResponse.success("프로젝트가 수정되었습니다.", project));
     }
 
     /**
      * Delete project (soft delete)
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteProject(
+    public ResponseEntity<ApiResponse<Void>> deleteProject(
             @PathVariable UUID id,
             @AuthenticationPrincipal User user) {
         log.info("Deleting project: {} for user: {}", id, user.getId());
         projectService.deleteProject(id, user);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ApiResponse.success("프로젝트가 삭제되었습니다.", null));
     }
 }
