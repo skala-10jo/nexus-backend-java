@@ -1,6 +1,7 @@
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/security/JwtAuthenticationFilter.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/dto/response/ExtractionJobResponse.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/controller/AuthController.java
+/Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/controller/ScheduleCategoryController.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/repository/GlossaryTermRepository.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/dto/request/GlossaryTermRequest.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/controller/HealthController.java
@@ -14,6 +15,7 @@
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/config/SecurityConfig.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/dto/response/DocumentMetadataDto.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/dto/request/ProjectRequest.java
+/Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/dto/request/CategoryRequest.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/dto/response/AuthResponse.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/service/ProjectService.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/dto/request/UpdateUserRequest.java
@@ -22,12 +24,15 @@
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/repository/DocumentContentRepository.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/dto/response/ContentPageDto.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/dto/request/LoginRequest.java
+/Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/dto/response/ScheduleCategoryResponse.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/dto/response/DocumentContentResponse.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/NexusApplication.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/entity/User.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/dto/response/ApiResponse.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/entity/DocumentStatus.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/security/JwtTokenProvider.java
+/Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/service/ScheduleCategoryService.java
+/Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/dto/request/CategoryOrderRequest.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/config/RestTemplateConfig.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/repository/ScheduleRepository.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/dto/request/PythonExtractionRequest.java
@@ -39,6 +44,7 @@
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/dto/response/GlossaryTermResponse.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/entity/DocumentContent.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/dto/request/RegisterRequest.java
+/Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/repository/ScheduleCategoryRepository.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/config/CorsConfig.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/dto/response/UserResponse.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/service/ScheduleService.java
@@ -48,6 +54,7 @@
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/entity/GlossaryExtractionJob.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/exception/GlobalExceptionHandler.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/dto/response/ProjectResponse.java
+/Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/entity/ScheduleCategory.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/repository/GlossaryExtractionJobRepository.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/service/FileStorageService.java
 /Users/kihoon/Desktop/final_project/backend-java/src/main/java/com/nexus/backend/entity/Document.java
