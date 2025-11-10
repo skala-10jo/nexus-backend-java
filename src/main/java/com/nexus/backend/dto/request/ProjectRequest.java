@@ -14,5 +14,7 @@ public class ProjectRequest {
 
     private String description;
 
+    private String status;
+
     private List<UUID> documentIds;
 }

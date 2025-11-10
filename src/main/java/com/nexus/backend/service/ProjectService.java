@@ -30,8 +30,9 @@ public class ProjectService {
 
     @Transactional(readOnly = true)
     public List<ProjectResponse> getUserProjects(User user) {
-        return projectRepository.findByUserIdAndStatus(user.getId(), "ACTIVE")
+        return projectRepository.findByUserId(user.getId())
                 .stream()
+                .filter(project -> !"DELETED".equals(project.getStatus())) // Exclude deleted projects only
                 .map(ProjectResponse::from)
                 .collect(Collectors.toList());
     }
@@ -81,6 +82,11 @@ public class ProjectService {
 
         project.setName(request.getName());
         project.setDescription(request.getDescription());
+
+        // Update status if provided
+        if (request.getStatus() != null) {
+            project.setStatus(request.getStatus());
+        }
 
         // Update documents if documentIds provided
         if (request.getDocumentIds() != null) {
