@@ -28,6 +28,9 @@ public class ScheduleRequest {
 
     private String location;
 
+    // Project ID (many-to-one)
+    private UUID projectId;
+
     // Multiple category IDs (many-to-many)
     private List<UUID> categoryIds = new ArrayList<>();
 }

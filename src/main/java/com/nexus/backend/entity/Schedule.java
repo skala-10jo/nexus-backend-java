@@ -52,6 +52,11 @@ public class Schedule {
     @Column(length = 50)
     private String location;
 
+    // Many-to-One relationship with Project
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id")
+    private Project project;
+
     // Many-to-Many relationship with ScheduleCategory
     @ManyToMany
     @JoinTable(

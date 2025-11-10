@@ -53,13 +53,13 @@ COMMENT ON TABLE schedule_category_mappings IS 'Many-to-many mapping between sch
 CREATE OR REPLACE FUNCTION create_default_categories(p_user_id UUID)
 RETURNS VOID AS $$
 BEGIN
-    INSERT INTO schedule_categories (id, user_id, name, color, icon, is_default, display_order)
+    INSERT INTO schedule_categories (id, user_id, name, color, icon, is_default, display_order, created_at, updated_at)
     VALUES
-        (gen_random_uuid(), p_user_id, '업무', '#3B82F6', 'briefcase', true, 1),
-        (gen_random_uuid(), p_user_id, '개인', '#10B981', 'user', true, 2),
-        (gen_random_uuid(), p_user_id, '회의', '#8B5CF6', 'users', true, 3),
-        (gen_random_uuid(), p_user_id, '휴가', '#F59E0B', 'sun', true, 4),
-        (gen_random_uuid(), p_user_id, '기타', '#6B7280', 'dots-horizontal', true, 5)
+        (gen_random_uuid(), p_user_id, '업무', '#3B82F6', 'briefcase', true, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+        (gen_random_uuid(), p_user_id, '개인', '#10B981', 'user', true, 2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+        (gen_random_uuid(), p_user_id, '회의', '#8B5CF6', 'users', true, 3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+        (gen_random_uuid(), p_user_id, '휴가', '#F59E0B', 'sun', true, 4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+        (gen_random_uuid(), p_user_id, '기타', '#6B7280', 'dots-horizontal', true, 5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     ON CONFLICT DO NOTHING;
 END;
 $$ LANGUAGE plpgsql;
@@ -89,6 +89,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS create_default_categories_on_user_insert ON users;
 CREATE TRIGGER create_default_categories_on_user_insert
 AFTER INSERT ON users
 FOR EACH ROW
@@ -125,8 +126,21 @@ BEGIN
 END $$;
 
 -- ============================================================
--- 7. Apply auto-update trigger for schedule_categories
+-- 7. Create utility function for auto-updating updated_at
 -- ============================================================
+-- This function is defined in V1 but V1 was baselined, so we need it here
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- ============================================================
+-- 8. Apply auto-update trigger for schedule_categories
+-- ============================================================
+DROP TRIGGER IF EXISTS update_schedule_categories_updated_at ON schedule_categories;
 CREATE TRIGGER update_schedule_categories_updated_at BEFORE UPDATE ON schedule_categories
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 

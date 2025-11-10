@@ -23,11 +23,10 @@ spring:
           time_zone: UTC
 
   flyway:
-    enabled: true
-    baseline-on-migrate: true
-    baseline-version: 2
-    locations: classpath:db/migration
-    validate-on-migrate: true
+    enabled: ${FLYWAY_ENABLED:true}
+    baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:true}
+    locations: ${FLYWAY_LOCATIONS:classpath:db/migration}
+    validate-on-migrate: ${FLYWAY_VALIDATE_ON_MIGRATE:true}
 
   servlet:
     multipart:
