@@ -2,11 +2,13 @@ package com.nexus.backend.service;
 
 import com.nexus.backend.dto.request.ProjectRequest;
 import com.nexus.backend.dto.response.ProjectResponse;
+import com.nexus.backend.dto.response.ScheduleResponse;
 import com.nexus.backend.entity.Document;
 import com.nexus.backend.entity.Project;
 import com.nexus.backend.entity.User;
 import com.nexus.backend.repository.DocumentRepository;
 import com.nexus.backend.repository.ProjectRepository;
+import com.nexus.backend.repository.ScheduleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,7 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final DocumentRepository documentRepository;
+    private final ScheduleRepository scheduleRepository;
 
     @Transactional(readOnly = true)
     public List<ProjectResponse> getUserProjects(User user) {
@@ -109,5 +112,18 @@ public class ProjectService {
         project.setStatus("DELETED");
         projectRepository.save(project);
         log.info("Deleted project: {}", projectId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ScheduleResponse> getProjectSchedules(UUID projectId, User user) {
+        // Verify project belongs to user
+        projectRepository.findByIdAndUserId(projectId, user.getId())
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+
+        // Use scheduleRepository to fetch schedules with project information
+        return scheduleRepository.findByProjectIdOrderByStartTimeAsc(projectId)
+                .stream()
+                .map(ScheduleResponse::from)
+                .collect(Collectors.toList());
     }
 }

@@ -30,9 +30,22 @@ public class ScheduleResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // Project information
+    private ProjectInfo project;
+
     // Multiple categories
     @Builder.Default
     private List<CategoryInfo> categories = new ArrayList<>();
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ProjectInfo {
+        private UUID id;
+        private String name;
+        private String description;
+    }
 
     @Data
     @Builder
@@ -55,6 +68,15 @@ public class ScheduleResponse {
                         .build())
                 .collect(Collectors.toList());
 
+        ProjectInfo projectInfo = null;
+        if (schedule.getProject() != null) {
+            projectInfo = ProjectInfo.builder()
+                    .id(schedule.getProject().getId())
+                    .name(schedule.getProject().getName())
+                    .description(schedule.getProject().getDescription())
+                    .build();
+        }
+
         return ScheduleResponse.builder()
                 .id(schedule.getId())
                 .title(schedule.getTitle())
@@ -64,6 +86,7 @@ public class ScheduleResponse {
                 .allDay(schedule.getAllDay())
                 .color(schedule.getColor())
                 .location(schedule.getLocation())
+                .project(projectInfo)
                 .categories(categoryInfos)
                 .createdAt(schedule.getCreatedAt())
                 .updatedAt(schedule.getUpdatedAt())

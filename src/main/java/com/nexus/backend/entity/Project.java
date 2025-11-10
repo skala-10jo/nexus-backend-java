@@ -51,6 +51,10 @@ public class Project {
     @Builder.Default
     private List<GlossaryTerm> glossaryTerms = new ArrayList<>();
 
+    // Note: Removed bidirectional relationship to avoid unnecessary memory overhead
+    // Use ScheduleRepository.findByProjectIdOrderByStartTimeAsc() to query schedules
+    // This prevents N+1 problems and keeps the relationship unidirectional
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
