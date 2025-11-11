@@ -5,6 +5,9 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 @Data
 public class ScheduleRequest {
@@ -24,4 +27,10 @@ public class ScheduleRequest {
     private String color;
 
     private String location;
+
+    // Project ID (many-to-one)
+    private UUID projectId;
+
+    // Multiple category IDs (many-to-many)
+    private List<UUID> categoryIds = new ArrayList<>();
 }

@@ -22,4 +22,6 @@ public interface ScheduleRepository extends JpaRepository<Schedule, UUID> {
         UUID userId,
         Instant now
     );
+
+    List<Schedule> findByProjectIdOrderByStartTimeAsc(UUID projectId);
 }

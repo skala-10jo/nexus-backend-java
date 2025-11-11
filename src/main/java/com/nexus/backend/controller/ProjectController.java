@@ -3,6 +3,7 @@ package com.nexus.backend.controller;
 import com.nexus.backend.dto.request.ProjectRequest;
 import com.nexus.backend.dto.response.ApiResponse;
 import com.nexus.backend.dto.response.ProjectResponse;
+import com.nexus.backend.dto.response.ScheduleResponse;
 import com.nexus.backend.entity.User;
 import com.nexus.backend.service.ProjectService;
 import lombok.RequiredArgsConstructor;
@@ -80,5 +81,17 @@ public class ProjectController {
         log.info("Deleting project: {} for user: {}", id, user.getId());
         projectService.deleteProject(id, user);
         return ResponseEntity.ok(ApiResponse.success("프로젝트가 삭제되었습니다.", null));
+    }
+
+    /**
+     * Get all schedules for a project
+     */
+    @GetMapping("/{id}/schedules")
+    public ResponseEntity<ApiResponse<List<ScheduleResponse>>> getProjectSchedules(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal User user) {
+        log.info("Getting schedules for project: {} for user: {}", id, user.getId());
+        List<ScheduleResponse> schedules = projectService.getProjectSchedules(id, user);
+        return ResponseEntity.ok(ApiResponse.success(schedules));
     }
 }
