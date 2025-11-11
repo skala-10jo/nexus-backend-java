@@ -19,6 +19,7 @@ public class EmailResponse {
     private String subject;
     private String fromAddress;
     private String fromName;
+    private String toRecipients;
     private String bodyPreview;
     private Boolean hasAttachments;
     private Boolean isRead;

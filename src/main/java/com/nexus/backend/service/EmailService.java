@@ -156,6 +156,7 @@ public class EmailService {
                 .subject(email.getSubject())
                 .fromAddress(email.getFromAddress())
                 .fromName(email.getFromName())
+                .toRecipients(email.getToRecipients())  // 수신자 추가
                 .bodyPreview(email.getBodyPreview())
                 .hasAttachments(email.getHasAttachments())
                 .isRead(email.getIsRead())
