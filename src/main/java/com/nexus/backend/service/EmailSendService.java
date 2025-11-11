@@ -8,6 +8,9 @@ import com.microsoft.graph.models.Recipient;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.nexus.backend.dto.request.SendEmailRequest;
 import com.nexus.backend.entity.User;
+import com.nexus.backend.exception.ResourceNotFoundException;
+import com.nexus.backend.exception.ServiceException;
+import com.nexus.backend.exception.UnauthorizedException;
 import com.nexus.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,10 +34,10 @@ public class EmailSendService {
      */
     public void sendEmail(UUID userId, SendEmailRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
         if (user.getOutlookAccessToken() == null) {
-            throw new RuntimeException("Outlook 계정이 연동되지 않았습니다");
+            throw new UnauthorizedException("Outlook 계정이 연동되지 않았습니다");
         }
 
         try {
@@ -108,7 +111,7 @@ public class EmailSendService {
 
         } catch (Exception e) {
             log.error("Failed to send email", e);
-            throw new RuntimeException("메일 발송 실패: " + e.getMessage());
+            throw new ServiceException("메일 발송 실패: " + e.getMessage(), e);
         }
     }
 }
