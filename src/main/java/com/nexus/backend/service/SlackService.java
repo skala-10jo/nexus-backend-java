@@ -3,17 +3,18 @@ package com.nexus.backend.service;
 import com.nexus.backend.dto.request.SendSlackMessageRequest;
 import com.nexus.backend.dto.response.SlackChannelResponse;
 import com.nexus.backend.dto.response.SlackIntegrationResponse;
+import com.nexus.backend.dto.response.SlackMessageResponse;
 import com.nexus.backend.entity.SlackIntegration;
 import com.nexus.backend.entity.User;
 import com.nexus.backend.repository.SlackIntegrationRepository;
 import com.slack.api.Slack;
 import com.slack.api.methods.SlackApiException;
 import com.slack.api.methods.request.conversations.ConversationsListRequest;
+import com.slack.api.model.ConversationType;
 import com.slack.api.methods.request.oauth.OAuthV2AccessRequest;
 import com.slack.api.methods.response.conversations.ConversationsListResponse;
 import com.slack.api.methods.response.oauth.OAuthV2AccessResponse;
 import com.slack.api.model.Conversation;
-import com.slack.api.model.ConversationType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,7 +22,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -47,10 +47,14 @@ public class SlackService {
      * Generate Slack OAuth authorization URL
      */
     public String getAuthorizationUrl(String state) {
-        String scopes = "channels:read,chat:write,users:read,team:read,im:read,mpim:read";
+        // Bot scopes
+        String botScopes = "channels:read,channels:history,chat:write,users:read,team:read";
+        // User scopes for DM access, messaging, and history
+        String userScopes = "channels:read,channels:history,im:read,im:history,mpim:read,mpim:history,chat:write,users:read";
+
         return String.format(
-                "https://slack.com/oauth/v2/authorize?client_id=%s&scope=%s&redirect_uri=%s&state=%s",
-                clientId, scopes, redirectUri, state
+                "https://slack.com/oauth/v2/authorize?client_id=%s&scope=%s&user_scope=%s&redirect_uri=%s&state=%s",
+                clientId, botScopes, userScopes, redirectUri, state
         );
     }
 
@@ -87,6 +91,13 @@ public class SlackService {
             integration.setAccessToken(response.getAccessToken());
             integration.setBotUserId(response.getBotUserId());
             integration.setBotAccessToken(response.getAccessToken());
+
+            // Store user access token if available (for DM access)
+            if (response.getAuthedUser() != null && response.getAuthedUser().getAccessToken() != null) {
+                integration.setUserAccessToken(response.getAuthedUser().getAccessToken());
+                log.info("Saved user access token for DM support");
+            }
+
             integration.setScope(response.getScope());
             integration.setIsActive(true);
 
@@ -140,7 +151,7 @@ public class SlackService {
     }
 
     /**
-     * Get list of channels, DMs, and group DMs for a workspace
+     * Get list of channels and DMs for a workspace
      */
     @Transactional(readOnly = true)
     public List<SlackChannelResponse> getChannels(UUID integrationId, User user) {
@@ -154,17 +165,12 @@ public class SlackService {
 
         try {
             List<SlackChannelResponse> allChannels = new java.util.ArrayList<>();
+            String token = integration.getBotAccessToken();
 
-            // Fetch all conversation types: channels, private channels, DMs, and group DMs
+            // Fetch regular channels using conversationsList
             ConversationsListRequest channelsRequest = ConversationsListRequest.builder()
-                    .token(integration.getBotAccessToken())
+                    .token(token)
                     .excludeArchived(true)
-                    .types(Arrays.asList(
-                            ConversationType.PUBLIC_CHANNEL,
-                            ConversationType.PRIVATE_CHANNEL,
-                            ConversationType.IM,
-                            ConversationType.MPIM
-                    ))
                     .build();
 
             ConversationsListResponse channelsResponse = slack.methods().conversationsList(channelsRequest);
@@ -173,46 +179,75 @@ public class SlackService {
                 throw new RuntimeException("Failed to fetch channels: " + channelsResponse.getError());
             }
 
-            // Log what we got from conversationsList
-            log.info("ConversationsList returned {} total conversations", channelsResponse.getChannels().size());
+            log.info("ConversationsList returned {} conversations", channelsResponse.getChannels().size());
 
-            // Process all conversations including channels and DMs
+            // Process regular channels
             channelsResponse.getChannels().stream()
-                    .map(channel -> {
-                        String displayName = channel.getName();
-                        boolean isDM = false;
+                    .map(channel -> SlackChannelResponse.builder()
+                            .id(channel.getId())
+                            .name(channel.getName())
+                            .isPrivate(channel.isPrivate())
+                            .isMember(channel.isMember())
+                            .isDM(false)
+                            .build())
+                    .forEach(allChannels::add);
 
-                        // Log details about each conversation
-                        log.info("Conversation: id={}, name={}, isIm={}, isMpim={}, isPrivate={}, user={}",
-                                channel.getId(), channel.getName(), channel.isIm(), channel.isMpim(),
-                                channel.isPrivate(), channel.getUser());
+            // Fetch DMs using user access token with types parameter
+            if (integration.getUserAccessToken() != null) {
+                try {
+                    String userToken = integration.getUserAccessToken();
 
-                        // Check if it's a DM (im or mpim type)
-                        if (channel.isIm()) {
-                            isDM = true;
-                            // For DMs, get user name
-                            if (channel.getUser() != null) {
-                                displayName = getUserDisplayName(integration.getBotAccessToken(), channel.getUser());
-                                log.info("Found DM with user {}, displaying as: {}", channel.getUser(), displayName);
+                    // Try fetching DMs with types=im,mpim using ConversationType enum
+                    ConversationsListRequest dmRequest = ConversationsListRequest.builder()
+                            .token(userToken)
+                            .types(java.util.Arrays.asList(ConversationType.IM, ConversationType.MPIM))
+                            .excludeArchived(true)
+                            .limit(1000)
+                            .build();
+
+                    ConversationsListResponse dmResponse = slack.methods().conversationsList(dmRequest);
+
+                    if (dmResponse.isOk()) {
+                        log.info("DM conversations.list returned {} items", dmResponse.getChannels().size());
+
+                        dmResponse.getChannels().forEach(conv -> {
+                            log.info("DM Conversation: id={}, name={}, isIm={}, isMpim={}, user={}",
+                                    conv.getId(), conv.getName(), conv.isIm(), conv.isMpim(), conv.getUser());
+                        });
+
+                        // Add all DMs to the list
+                        dmResponse.getChannels().forEach(dm -> {
+                            String displayName;
+                            if (dm.isIm() && dm.getUser() != null) {
+                                displayName = getUserDisplayName(userToken, dm.getUser());
+                            } else if (dm.isMpim()) {
+                                displayName = "Group DM";
                             } else {
                                 displayName = "Direct Message";
                             }
-                        } else if (channel.isMpim()) {
-                            isDM = true;
-                            displayName = "Group DM";
-                            log.info("Found Group DM: {}", channel.getId());
-                        }
 
-                        return SlackChannelResponse.builder()
-                                .id(channel.getId())
-                                .name(displayName)
-                                .isPrivate(channel.isPrivate() || isDM)
-                                .isMember(channel.isMember())
-                                .build();
-                    })
-                    .forEach(allChannels::add);
+                            allChannels.add(SlackChannelResponse.builder()
+                                    .id(dm.getId())
+                                    .name(displayName)
+                                    .isPrivate(true)
+                                    .isMember(true)
+                                    .isDM(true)
+                                    .build());
+                        });
 
-            log.info("Fetched {} total conversations (channels + DMs)", allChannels.size());
+                        log.info("Added {} DMs", dmResponse.getChannels().size());
+                    } else {
+                        log.warn("Failed to fetch DMs: error={}, needed={}",
+                                dmResponse.getError(), dmResponse.getNeeded());
+                    }
+                } catch (Exception e) {
+                    log.error("Error fetching DMs: {}", e.getMessage(), e);
+                }
+            } else {
+                log.warn("No user access token available for DM fetching");
+            }
+
+            log.info("Fetched {} total conversations", allChannels.size());
             return allChannels;
 
         } catch (IOException | SlackApiException e) {
@@ -239,7 +274,7 @@ public class SlackService {
     }
 
     /**
-     * Send a message to a Slack channel
+     * Send a message to a Slack channel or DM
      */
     @Transactional(readOnly = true)
     public void sendMessage(UUID integrationId, SendSlackMessageRequest request, User user) {
@@ -252,7 +287,19 @@ public class SlackService {
         }
 
         try {
-            var response = slack.methods(integration.getBotAccessToken())
+            // Determine if this is a DM based on channel ID prefix
+            // D = Direct Message, G = Group DM (some older format), C = Channel
+            boolean isDM = request.getChannelId().startsWith("D") || request.getChannelId().startsWith("G");
+
+            // Use user token for DMs, bot token for channels
+            String token = isDM && integration.getUserAccessToken() != null
+                    ? integration.getUserAccessToken()
+                    : integration.getBotAccessToken();
+
+            log.info("Sending message to {} (isDM={}) using {} token",
+                    request.getChannelId(), isDM, isDM ? "user" : "bot");
+
+            var response = slack.methods(token)
                     .chatPostMessage(req -> req
                             .channel(request.getChannelId())
                             .text(request.getText())
@@ -268,6 +315,63 @@ public class SlackService {
         } catch (IOException | SlackApiException e) {
             log.error("Error sending Slack message", e);
             throw new RuntimeException("Failed to send message: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Get message history for a channel or DM
+     */
+    @Transactional(readOnly = true)
+    public List<SlackMessageResponse> getMessageHistory(UUID integrationId, String channelId, User user) {
+        SlackIntegration integration = slackIntegrationRepository
+                .findByIdAndUserId(integrationId, user.getId())
+                .orElseThrow(() -> new RuntimeException("Slack integration not found"));
+
+        if (!integration.getIsActive()) {
+            throw new RuntimeException("Slack integration is not active");
+        }
+
+        try {
+            // Determine if this is a DM
+            boolean isDM = channelId.startsWith("D") || channelId.startsWith("G");
+
+            // Use appropriate token
+            String token = isDM && integration.getUserAccessToken() != null
+                    ? integration.getUserAccessToken()
+                    : integration.getBotAccessToken();
+
+            var response = slack.methods(token).conversationsHistory(req -> req
+                    .channel(channelId)
+                    .limit(50));
+
+            if (!response.isOk()) {
+                throw new RuntimeException("Failed to fetch message history: " + response.getError());
+            }
+
+            log.info("Fetched {} messages from channel {}", response.getMessages().size(), channelId);
+
+            return response.getMessages().stream()
+                    .map(message -> {
+                        String username = null;
+                        if (message.getUser() != null) {
+                            username = getUserDisplayName(token, message.getUser());
+                        } else if (message.getBotId() != null) {
+                            username = message.getUsername() != null ? message.getUsername() : "Bot";
+                        }
+
+                        return SlackMessageResponse.builder()
+                                .text(message.getText())
+                                .user(message.getUser())
+                                .username(username)
+                                .timestamp(message.getTs())
+                                .botId(message.getBotId())
+                                .build();
+                    })
+                    .collect(Collectors.toList());
+
+        } catch (IOException | SlackApiException e) {
+            log.error("Error fetching message history", e);
+            throw new RuntimeException("Failed to fetch message history: " + e.getMessage());
         }
     }
 }

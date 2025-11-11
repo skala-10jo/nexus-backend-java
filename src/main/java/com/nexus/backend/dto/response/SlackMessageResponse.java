@@ -9,11 +9,11 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SlackChannelResponse {
+public class SlackMessageResponse {
 
-    private String id;
-    private String name;
-    private Boolean isPrivate;
-    private Boolean isMember;
-    private Boolean isDM;
+    private String text;
+    private String user;
+    private String username;
+    private String timestamp;
+    private String botId;
 }

@@ -42,6 +42,9 @@ public class SlackIntegration {
     @Column(name = "bot_access_token", length = 512)
     private String botAccessToken;
 
+    @Column(name = "user_access_token", length = 512)
+    private String userAccessToken;
+
     @Column(name = "scope", length = 1000)
     private String scope;
 

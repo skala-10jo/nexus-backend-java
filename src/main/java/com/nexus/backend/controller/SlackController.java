@@ -112,4 +112,17 @@ public class SlackController {
         slackService.sendMessage(integrationId, request, user);
         return ResponseEntity.ok(Map.of("message", "Message sent successfully"));
     }
+
+    /**
+     * Get message history for a channel or DM
+     */
+    @GetMapping("/integrations/{integrationId}/channels/{channelId}/history")
+    public ResponseEntity<List<com.nexus.backend.dto.response.SlackMessageResponse>> getMessageHistory(
+            @PathVariable UUID integrationId,
+            @PathVariable String channelId,
+            @AuthenticationPrincipal User user) {
+        log.info("Getting message history for channel: {} via integration: {}", channelId, integrationId);
+        var messages = slackService.getMessageHistory(integrationId, channelId, user);
+        return ResponseEntity.ok(messages);
+    }
 }
