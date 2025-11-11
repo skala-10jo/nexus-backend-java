@@ -24,6 +24,7 @@ public class EmailSendService {
 
     private final UserRepository userRepository;
     private final OutlookAuthService outlookAuthService;
+    private final EmailSyncService emailSyncService;
 
     /**
      * 메일 발송
@@ -95,6 +96,15 @@ public class EmailSendService {
             graphClient.me().sendMail().post(requestBody);
 
             log.info("Email sent successfully from user: {}", userId);
+
+            // 보낸편지함 동기화 (비동기로 실행하여 메일 전송 응답 속도 유지)
+            try {
+                emailSyncService.syncSentItems(userId);
+                log.info("SentItems synced after sending email for user: {}", userId);
+            } catch (Exception syncError) {
+                // 동기화 실패해도 메일은 이미 전송되었으므로 로그만 남김
+                log.error("Failed to sync SentItems after sending email", syncError);
+            }
 
         } catch (Exception e) {
             log.error("Failed to send email", e);
