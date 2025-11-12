@@ -46,6 +46,9 @@ public class GlossaryTerm {
     @Column(name = "english_term", length = 255)
     private String englishTerm;
 
+    @Column(name = "vietnamese_term", length = 255)
+    private String vietnameseTerm;
+
     @Column(length = 100)
     private String abbreviation;
 
@@ -54,6 +57,12 @@ public class GlossaryTerm {
 
     @Column(columnDefinition = "TEXT")
     private String context;
+
+    @Column(name = "example_sentence", columnDefinition = "TEXT")
+    private String exampleSentence;
+
+    @Column(columnDefinition = "TEXT")
+    private String note;
 
     @Column(length = 100)
     private String domain;

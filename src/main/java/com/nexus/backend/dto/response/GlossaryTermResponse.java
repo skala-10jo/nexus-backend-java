@@ -22,9 +22,12 @@ public class GlossaryTermResponse {
     private UUID projectId;
     private String koreanTerm;
     private String englishTerm;
+    private String vietnameseTerm;
     private String abbreviation;
     private String definition;
     private String context;
+    private String exampleSentence;
+    private String note;
     private String domain;
     private BigDecimal confidenceScore;
     private String status;
@@ -58,9 +61,12 @@ public class GlossaryTermResponse {
                 .projectId(term.getProject() != null ? term.getProject().getId() : null)
                 .koreanTerm(term.getKoreanTerm())
                 .englishTerm(term.getEnglishTerm())
+                .vietnameseTerm(term.getVietnameseTerm())
                 .abbreviation(term.getAbbreviation())
                 .definition(term.getDefinition())
                 .context(term.getContext())
+                .exampleSentence(term.getExampleSentence())
+                .note(term.getNote())
                 .domain(term.getDomain())
                 .confidenceScore(term.getConfidenceScore())
                 .status(term.getStatus())

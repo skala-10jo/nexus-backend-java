@@ -34,6 +34,8 @@ public interface GlossaryTermRepository extends JpaRepository<GlossaryTerm, UUID
 
     long countByUserIdAndStatus(UUID userId, String status);
 
+    long countByUserIdAndIsVerified(UUID userId, boolean isVerified);
+
     boolean existsByUserIdAndKoreanTerm(UUID userId, String koreanTerm);
 
     // Project-level queries (filtered by project)
@@ -56,4 +58,6 @@ public interface GlossaryTermRepository extends JpaRepository<GlossaryTerm, UUID
     long countByProjectId(UUID projectId);
 
     long countByProjectIdAndStatus(UUID projectId, String status);
+
+    long countByProjectIdAndIsVerified(UUID projectId, boolean isVerified);
 }

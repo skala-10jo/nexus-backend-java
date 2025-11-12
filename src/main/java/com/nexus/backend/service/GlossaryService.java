@@ -3,6 +3,7 @@ package com.nexus.backend.service;
 import com.nexus.backend.dto.request.GlossaryTermRequest;
 import com.nexus.backend.dto.request.PythonExtractionRequest;
 import com.nexus.backend.dto.response.ExtractionJobResponse;
+import com.nexus.backend.dto.response.GlossaryStatisticsResponse;
 import com.nexus.backend.dto.response.GlossaryTermResponse;
 import com.nexus.backend.entity.Document;
 import com.nexus.backend.entity.GlossaryExtractionJob;
@@ -160,9 +161,12 @@ public class GlossaryService {
                 .user(user)
                 .koreanTerm(request.getKoreanTerm())
                 .englishTerm(request.getEnglishTerm())
+                .vietnameseTerm(request.getVietnameseTerm())
                 .abbreviation(request.getAbbreviation())
                 .definition(request.getDefinition())
                 .context(request.getContext())
+                .exampleSentence(request.getExampleSentence())
+                .note(request.getNote())
                 .domain(request.getDomain())
                 .status("USER_ADDED")
                 .isVerified(true)
@@ -182,9 +186,12 @@ public class GlossaryService {
 
         term.setKoreanTerm(request.getKoreanTerm());
         term.setEnglishTerm(request.getEnglishTerm());
+        term.setVietnameseTerm(request.getVietnameseTerm());
         term.setAbbreviation(request.getAbbreviation());
         term.setDefinition(request.getDefinition());
         term.setContext(request.getContext());
+        term.setExampleSentence(request.getExampleSentence());
+        term.setNote(request.getNote());
         term.setDomain(request.getDomain());
         term.setStatus("USER_EDITED");
 
@@ -247,5 +254,43 @@ public class GlossaryService {
         log.info("Unverified glossary term: {}", termId);
 
         return GlossaryTermResponse.from(term);
+    }
+
+    public GlossaryStatisticsResponse getStatistics(User user, UUID projectId) {
+        long totalTerms;
+        long verifiedTerms;
+        long unverifiedTerms;
+        long autoExtractedTerms;
+        long userAddedTerms;
+        long userEditedTerms;
+
+        if (projectId != null) {
+            // Project-level statistics
+            totalTerms = glossaryTermRepository.countByProjectId(projectId);
+            verifiedTerms = glossaryTermRepository.countByProjectIdAndIsVerified(projectId, true);
+            unverifiedTerms = glossaryTermRepository.countByProjectIdAndIsVerified(projectId, false);
+            autoExtractedTerms = glossaryTermRepository.countByProjectIdAndStatus(projectId, "AUTO_EXTRACTED");
+            userAddedTerms = glossaryTermRepository.countByProjectIdAndStatus(projectId, "USER_ADDED");
+            userEditedTerms = glossaryTermRepository.countByProjectIdAndStatus(projectId, "USER_EDITED");
+        } else {
+            // User-level statistics
+            totalTerms = glossaryTermRepository.countByUserId(user.getId());
+            verifiedTerms = glossaryTermRepository.countByUserIdAndIsVerified(user.getId(), true);
+            unverifiedTerms = glossaryTermRepository.countByUserIdAndIsVerified(user.getId(), false);
+            autoExtractedTerms = glossaryTermRepository.countByUserIdAndStatus(user.getId(), "AUTO_EXTRACTED");
+            userAddedTerms = glossaryTermRepository.countByUserIdAndStatus(user.getId(), "USER_ADDED");
+            userEditedTerms = glossaryTermRepository.countByUserIdAndStatus(user.getId(), "USER_EDITED");
+        }
+
+        log.info("Retrieved glossary statistics for user: {} (projectId: {})", user.getId(), projectId);
+
+        return GlossaryStatisticsResponse.builder()
+                .totalTerms(totalTerms)
+                .verifiedTerms(verifiedTerms)
+                .unverifiedTerms(unverifiedTerms)
+                .autoExtractedTerms(autoExtractedTerms)
+                .userAddedTerms(userAddedTerms)
+                .userEditedTerms(userEditedTerms)
+                .build();
     }
 }
