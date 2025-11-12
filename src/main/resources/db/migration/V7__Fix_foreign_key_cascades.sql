@@ -12,9 +12,16 @@ ALTER TABLE project_documents DROP CONSTRAINT IF EXISTS fk845kd34e1hofxb67dkr4no
 
 -- CASCADE DELETE를 포함한 새 제약조건 추가
 -- 문서 삭제 시 project_documents의 관련 레코드도 자동 삭제됨
-ALTER TABLE project_documents
-ADD CONSTRAINT fk_project_documents_document
-FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_project_documents_document'
+    ) THEN
+        ALTER TABLE project_documents
+        ADD CONSTRAINT fk_project_documents_document
+        FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE;
+    END IF;
+END $$;
 
 -- ============================================================
 -- 2. translation_terms 테이블 수정 (용어 삭제 지원)
@@ -25,14 +32,28 @@ ALTER TABLE translation_terms DROP CONSTRAINT IF EXISTS fkbkr5b4vv93ek9jf664ltnt
 
 -- CASCADE DELETE를 포함한 새 제약조건 추가
 -- 용어 삭제 시 translation_terms의 관련 레코드도 자동 삭제됨
-ALTER TABLE translation_terms
-ADD CONSTRAINT fk_translation_terms_glossary_term
-FOREIGN KEY (glossary_term_id) REFERENCES glossary_terms(id) ON DELETE CASCADE;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_translation_terms_glossary_term'
+    ) THEN
+        ALTER TABLE translation_terms
+        ADD CONSTRAINT fk_translation_terms_glossary_term
+        FOREIGN KEY (glossary_term_id) REFERENCES glossary_terms(id) ON DELETE CASCADE;
+    END IF;
+END $$;
 
 -- 번역 삭제 시 translation_terms의 관련 레코드도 자동 삭제됨
-ALTER TABLE translation_terms
-ADD CONSTRAINT fk_translation_terms_translation
-FOREIGN KEY (translation_id) REFERENCES translations(id) ON DELETE CASCADE;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_translation_terms_translation'
+    ) THEN
+        ALTER TABLE translation_terms
+        ADD CONSTRAINT fk_translation_terms_translation
+        FOREIGN KEY (translation_id) REFERENCES translations(id) ON DELETE CASCADE;
+    END IF;
+END $$;
 
 -- ============================================================
 -- 변경사항 요약
