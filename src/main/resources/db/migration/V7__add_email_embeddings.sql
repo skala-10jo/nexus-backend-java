@@ -3,7 +3,7 @@
 -- Date: 2025-01-12
 
 -- pgvector 확장 설치 (이미 설치되어 있으면 무시)
--- CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS vector;
 
 -- email_embeddings 테이블 생성
 CREATE TABLE email_embeddings (

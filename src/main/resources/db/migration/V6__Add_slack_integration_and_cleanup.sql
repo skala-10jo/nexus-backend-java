@@ -110,12 +110,12 @@ CREATE TABLE IF NOT EXISTS slack_messages (
 );
 
 -- Indexes for performance
-CREATE INDEX idx_slack_messages_user_id ON slack_messages(user_id);
-CREATE INDEX idx_slack_messages_channel_id ON slack_messages(channel_id);
-CREATE INDEX idx_slack_messages_thread_ts ON slack_messages(thread_ts) WHERE thread_ts IS NOT NULL;
-CREATE INDEX idx_slack_messages_is_read ON slack_messages(is_read);
-CREATE INDEX idx_slack_messages_posted_at ON slack_messages(posted_at DESC);
-CREATE INDEX idx_slack_messages_user_channel ON slack_messages(user_id, channel_id, posted_at DESC);
+CREATE INDEX IF NOT EXISTS idx_slack_messages_user_id ON slack_messages(user_id);
+CREATE INDEX IF NOT EXISTS idx_slack_messages_channel_id ON slack_messages(channel_id);
+CREATE INDEX IF NOT EXISTS idx_slack_messages_thread_ts ON slack_messages(thread_ts) WHERE thread_ts IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_slack_messages_is_read ON slack_messages(is_read);
+CREATE INDEX IF NOT EXISTS idx_slack_messages_posted_at ON slack_messages(posted_at DESC);
+CREATE INDEX IF NOT EXISTS idx_slack_messages_user_channel ON slack_messages(user_id, channel_id, posted_at DESC);
 
 -- Table comments
 COMMENT ON TABLE slack_messages IS 'Synchronized Slack messages for communication tracking';
@@ -159,8 +159,8 @@ CREATE TABLE IF NOT EXISTS slack_message_attachments (
 );
 
 -- Indexes
-CREATE INDEX idx_slack_message_attachments_message_id ON slack_message_attachments(message_id);
-CREATE INDEX idx_slack_message_attachments_file_id ON slack_message_attachments(file_id);
+CREATE INDEX IF NOT EXISTS idx_slack_message_attachments_message_id ON slack_message_attachments(message_id);
+CREATE INDEX IF NOT EXISTS idx_slack_message_attachments_file_id ON slack_message_attachments(file_id);
 
 -- Comments
 COMMENT ON TABLE slack_message_attachments IS 'Slack message file attachments';
