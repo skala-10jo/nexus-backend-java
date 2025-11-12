@@ -53,76 +53,60 @@ public class SlackController {
     }
 
     /**
-     * Get all Slack integrations for current user
+     * Get Slack integration status for current user
      */
-    @GetMapping("/integrations")
-    public ResponseEntity<List<SlackIntegrationResponse>> getIntegrations(
+    @GetMapping("/status")
+    public ResponseEntity<SlackIntegrationResponse> getIntegrationStatus(
             @AuthenticationPrincipal User user) {
-        log.info("Getting Slack integrations for user: {}", user.getId());
-        List<SlackIntegrationResponse> integrations = slackService.getUserIntegrations(user);
-        return ResponseEntity.ok(integrations);
-    }
-
-    /**
-     * Get a specific Slack integration
-     */
-    @GetMapping("/integrations/{integrationId}")
-    public ResponseEntity<SlackIntegrationResponse> getIntegration(
-            @PathVariable UUID integrationId,
-            @AuthenticationPrincipal User user) {
-        log.info("Getting Slack integration: {} for user: {}", integrationId, user.getId());
-        SlackIntegrationResponse integration = slackService.getIntegration(integrationId, user);
+        log.info("Getting Slack integration status for user: {}", user.getId());
+        SlackIntegrationResponse integration = slackService.getIntegration(user);
         return ResponseEntity.ok(integration);
     }
 
     /**
-     * Delete a Slack integration
+     * Disconnect Slack integration
      */
-    @DeleteMapping("/integrations/{integrationId}")
-    public ResponseEntity<Map<String, String>> deleteIntegration(
-            @PathVariable UUID integrationId,
+    @DeleteMapping("/disconnect")
+    public ResponseEntity<Map<String, String>> disconnectIntegration(
             @AuthenticationPrincipal User user) {
-        log.info("Deleting Slack integration: {} for user: {}", integrationId, user.getId());
-        slackService.deleteIntegration(integrationId, user);
-        return ResponseEntity.ok(Map.of("message", "Slack integration deleted successfully"));
+        log.info("Disconnecting Slack integration for user: {}", user.getId());
+        slackService.disconnectIntegration(user);
+        return ResponseEntity.ok(Map.of("message", "Slack integration disconnected successfully"));
     }
 
     /**
-     * Get channels for a Slack workspace
+     * Get channels for current user's Slack workspace
      */
-    @GetMapping("/integrations/{integrationId}/channels")
+    @GetMapping("/channels")
     public ResponseEntity<List<SlackChannelResponse>> getChannels(
-            @PathVariable UUID integrationId,
             @AuthenticationPrincipal User user) {
-        log.info("Getting channels for integration: {} and user: {}", integrationId, user.getId());
-        List<SlackChannelResponse> channels = slackService.getChannels(integrationId, user);
+        log.info("Getting channels for user: {}", user.getId());
+        List<SlackChannelResponse> channels = slackService.getChannels(user);
         return ResponseEntity.ok(channels);
     }
 
     /**
      * Send a message to a Slack channel
      */
-    @PostMapping("/integrations/{integrationId}/send")
+    @PostMapping("/send")
     public ResponseEntity<Map<String, String>> sendMessage(
-            @PathVariable UUID integrationId,
             @Valid @RequestBody SendSlackMessageRequest request,
             @AuthenticationPrincipal User user) {
-        log.info("Sending message to Slack channel: {} via integration: {}",
-                request.getChannelId(), integrationId);
-        slackService.sendMessage(integrationId, request, user);
+        log.info("Sending message to Slack channel: {} for user: {}",
+                request.getChannelId(), user.getId());
+        slackService.sendMessage(request, user);
         return ResponseEntity.ok(Map.of("message", "Message sent successfully"));
     }
 
     /**
      * Get message history for a channel or DM
      */
-    @GetMapping("/integrations/{integrationId}/channels/{channelId}/history")
+    @GetMapping("/channels/{channelId}/history")
     public ResponseEntity<List<com.nexus.backend.dto.response.SlackMessageResponse>> getMessageHistory(
-            @PathVariable UUID integrationId,
             @PathVariable String channelId,
             @AuthenticationPrincipal User user) {
-        log.info("Getting message history for channel: {} via integration: {}", channelId, integrationId);
-        var messages = slackService.getMessageHistory(integrationId, channelId, user);
+        log.info("Getting message history for channel: {} and user: {}", channelId, user.getId());
+        var messages = slackService.getMessageHistory(channelId, user);
         return ResponseEntity.ok(messages);
     }
 }

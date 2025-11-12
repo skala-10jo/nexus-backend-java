@@ -4,9 +4,8 @@ import com.nexus.backend.dto.request.SendSlackMessageRequest;
 import com.nexus.backend.dto.response.SlackChannelResponse;
 import com.nexus.backend.dto.response.SlackIntegrationResponse;
 import com.nexus.backend.dto.response.SlackMessageResponse;
-import com.nexus.backend.entity.SlackIntegration;
 import com.nexus.backend.entity.User;
-import com.nexus.backend.repository.SlackIntegrationRepository;
+import com.nexus.backend.repository.UserRepository;
 import com.slack.api.Slack;
 import com.slack.api.methods.SlackApiException;
 import com.slack.api.methods.request.conversations.ConversationsListRequest;
@@ -22,8 +21,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,7 +32,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class SlackService {
 
-    private final SlackIntegrationRepository slackIntegrationRepository;
+    private final UserRepository userRepository;
     private final Slack slack = Slack.getInstance();
 
     @Value("${slack.client-id}")
@@ -52,14 +53,17 @@ public class SlackService {
         // User scopes for DM access, messaging, and history
         String userScopes = "channels:read,channels:history,im:read,im:history,mpim:read,mpim:history,chat:write,users:read";
 
+        // URL encode the redirect URI
+        String encodedRedirectUri = URLEncoder.encode(redirectUri, StandardCharsets.UTF_8);
+
         return String.format(
                 "https://slack.com/oauth/v2/authorize?client_id=%s&scope=%s&user_scope=%s&redirect_uri=%s&state=%s",
-                clientId, botScopes, userScopes, redirectUri, state
+                clientId, botScopes, userScopes, encodedRedirectUri, state
         );
     }
 
     /**
-     * Handle OAuth callback and save integration
+     * Handle OAuth callback and save integration to User entity
      */
     @Transactional
     public SlackIntegrationResponse handleOAuthCallback(String code, User user) {
@@ -78,35 +82,33 @@ public class SlackService {
                 throw new RuntimeException("Failed to exchange OAuth code: " + response.getError());
             }
 
-            // Check if integration already exists for this workspace
-            SlackIntegration integration = slackIntegrationRepository
-                    .findByUserIdAndWorkspaceId(user.getId(), response.getTeam().getId())
-                    .orElse(SlackIntegration.builder()
-                            .user(user)
-                            .workspaceId(response.getTeam().getId())
-                            .build());
-
-            // Update integration details
-            integration.setWorkspaceName(response.getTeam().getName());
-            integration.setAccessToken(response.getAccessToken());
-            integration.setBotUserId(response.getBotUserId());
-            integration.setBotAccessToken(response.getAccessToken());
+            // Update user's Slack integration fields
+            user.setSlackWorkspaceId(response.getTeam().getId());
+            user.setSlackWorkspaceName(response.getTeam().getName());
+            user.setSlackAccessToken(response.getAccessToken());
+            user.setSlackBotUserId(response.getBotUserId());
+            user.setSlackBotAccessToken(response.getAccessToken());
 
             // Store user access token if available (for DM access)
             if (response.getAuthedUser() != null && response.getAuthedUser().getAccessToken() != null) {
-                integration.setUserAccessToken(response.getAuthedUser().getAccessToken());
+                user.setSlackUserAccessToken(response.getAuthedUser().getAccessToken());
                 log.info("Saved user access token for DM support");
             }
 
-            integration.setScope(response.getScope());
-            integration.setIsActive(true);
+            user.setSlackScope(response.getScope());
+            user.setSlackIsActive(true);
 
-            integration = slackIntegrationRepository.save(integration);
+            // Set connected timestamp if this is first connection
+            if (user.getSlackConnectedAt() == null) {
+                user.setSlackConnectedAt(LocalDateTime.now());
+            }
+
+            user = userRepository.save(user);
 
             log.info("Slack integration created/updated for user {} and workspace {}",
                     user.getId(), response.getTeam().getId());
 
-            return SlackIntegrationResponse.from(integration);
+            return SlackIntegrationResponse.from(user);
 
         } catch (IOException | SlackApiException e) {
             log.error("Error during Slack OAuth callback", e);
@@ -115,57 +117,52 @@ public class SlackService {
     }
 
     /**
-     * Get all Slack integrations for a user
+     * Get Slack integration status for current user
      */
     @Transactional(readOnly = true)
-    public List<SlackIntegrationResponse> getUserIntegrations(User user) {
-        return slackIntegrationRepository.findByUserId(user.getId())
-                .stream()
-                .map(SlackIntegrationResponse::from)
-                .collect(Collectors.toList());
+    public SlackIntegrationResponse getIntegration(User user) {
+        if (user.getSlackWorkspaceId() == null) {
+            throw new RuntimeException("Slack integration not found");
+        }
+        return SlackIntegrationResponse.from(user);
     }
 
     /**
-     * Get a specific integration
-     */
-    @Transactional(readOnly = true)
-    public SlackIntegrationResponse getIntegration(UUID integrationId, User user) {
-        SlackIntegration integration = slackIntegrationRepository
-                .findByIdAndUserId(integrationId, user.getId())
-                .orElseThrow(() -> new RuntimeException("Slack integration not found"));
-
-        return SlackIntegrationResponse.from(integration);
-    }
-
-    /**
-     * Delete Slack integration
+     * Disconnect Slack integration (clear all Slack fields)
      */
     @Transactional
-    public void deleteIntegration(UUID integrationId, User user) {
-        SlackIntegration integration = slackIntegrationRepository
-                .findByIdAndUserId(integrationId, user.getId())
-                .orElseThrow(() -> new RuntimeException("Slack integration not found"));
+    public void disconnectIntegration(User user) {
+        user.setSlackWorkspaceId(null);
+        user.setSlackWorkspaceName(null);
+        user.setSlackAccessToken(null);
+        user.setSlackBotUserId(null);
+        user.setSlackBotAccessToken(null);
+        user.setSlackUserAccessToken(null);
+        user.setSlackScope(null);
+        user.setSlackIsActive(false);
+        user.setSlackTokenExpiresAt(null);
+        user.setSlackConnectedAt(null);
 
-        slackIntegrationRepository.delete(integration);
-        log.info("Deleted Slack integration {} for user {}", integrationId, user.getId());
+        userRepository.save(user);
+        log.info("Disconnected Slack integration for user {}", user.getId());
     }
 
     /**
-     * Get list of channels and DMs for a workspace
+     * Get list of channels and DMs for current user's workspace
      */
     @Transactional(readOnly = true)
-    public List<SlackChannelResponse> getChannels(UUID integrationId, User user) {
-        SlackIntegration integration = slackIntegrationRepository
-                .findByIdAndUserId(integrationId, user.getId())
-                .orElseThrow(() -> new RuntimeException("Slack integration not found"));
+    public List<SlackChannelResponse> getChannels(User user) {
+        if (user.getSlackWorkspaceId() == null) {
+            throw new RuntimeException("Slack integration not found");
+        }
 
-        if (!integration.getIsActive()) {
+        if (!Boolean.TRUE.equals(user.getSlackIsActive())) {
             throw new RuntimeException("Slack integration is not active");
         }
 
         try {
             List<SlackChannelResponse> allChannels = new java.util.ArrayList<>();
-            String token = integration.getBotAccessToken();
+            String token = user.getSlackBotAccessToken();
 
             // Fetch regular channels using conversationsList
             ConversationsListRequest channelsRequest = ConversationsListRequest.builder()
@@ -193,9 +190,9 @@ public class SlackService {
                     .forEach(allChannels::add);
 
             // Fetch DMs using user access token with types parameter
-            if (integration.getUserAccessToken() != null) {
+            if (user.getSlackUserAccessToken() != null) {
                 try {
-                    String userToken = integration.getUserAccessToken();
+                    String userToken = user.getSlackUserAccessToken();
 
                     // Try fetching DMs with types=im,mpim using ConversationType enum
                     ConversationsListRequest dmRequest = ConversationsListRequest.builder()
@@ -277,12 +274,12 @@ public class SlackService {
      * Send a message to a Slack channel or DM
      */
     @Transactional(readOnly = true)
-    public void sendMessage(UUID integrationId, SendSlackMessageRequest request, User user) {
-        SlackIntegration integration = slackIntegrationRepository
-                .findByIdAndUserId(integrationId, user.getId())
-                .orElseThrow(() -> new RuntimeException("Slack integration not found"));
+    public void sendMessage(SendSlackMessageRequest request, User user) {
+        if (user.getSlackWorkspaceId() == null) {
+            throw new RuntimeException("Slack integration not found");
+        }
 
-        if (!integration.getIsActive()) {
+        if (!Boolean.TRUE.equals(user.getSlackIsActive())) {
             throw new RuntimeException("Slack integration is not active");
         }
 
@@ -292,9 +289,9 @@ public class SlackService {
             boolean isDM = request.getChannelId().startsWith("D") || request.getChannelId().startsWith("G");
 
             // Use user token for DMs, bot token for channels
-            String token = isDM && integration.getUserAccessToken() != null
-                    ? integration.getUserAccessToken()
-                    : integration.getBotAccessToken();
+            String token = isDM && user.getSlackUserAccessToken() != null
+                    ? user.getSlackUserAccessToken()
+                    : user.getSlackBotAccessToken();
 
             log.info("Sending message to {} (isDM={}) using {} token",
                     request.getChannelId(), isDM, isDM ? "user" : "bot");
@@ -309,8 +306,8 @@ public class SlackService {
                 throw new RuntimeException("Failed to send message: " + response.getError());
             }
 
-            log.info("Message sent to Slack channel {} via integration {}",
-                    request.getChannelId(), integrationId);
+            log.info("Message sent to Slack channel {} for user {}",
+                    request.getChannelId(), user.getId());
 
         } catch (IOException | SlackApiException e) {
             log.error("Error sending Slack message", e);
@@ -322,12 +319,12 @@ public class SlackService {
      * Get message history for a channel or DM
      */
     @Transactional(readOnly = true)
-    public List<SlackMessageResponse> getMessageHistory(UUID integrationId, String channelId, User user) {
-        SlackIntegration integration = slackIntegrationRepository
-                .findByIdAndUserId(integrationId, user.getId())
-                .orElseThrow(() -> new RuntimeException("Slack integration not found"));
+    public List<SlackMessageResponse> getMessageHistory(String channelId, User user) {
+        if (user.getSlackWorkspaceId() == null) {
+            throw new RuntimeException("Slack integration not found");
+        }
 
-        if (!integration.getIsActive()) {
+        if (!Boolean.TRUE.equals(user.getSlackIsActive())) {
             throw new RuntimeException("Slack integration is not active");
         }
 
@@ -336,9 +333,9 @@ public class SlackService {
             boolean isDM = channelId.startsWith("D") || channelId.startsWith("G");
 
             // Use appropriate token
-            String token = isDM && integration.getUserAccessToken() != null
-                    ? integration.getUserAccessToken()
-                    : integration.getBotAccessToken();
+            String token = isDM && user.getSlackUserAccessToken() != null
+                    ? user.getSlackUserAccessToken()
+                    : user.getSlackBotAccessToken();
 
             var response = slack.methods(token).conversationsHistory(req -> req
                     .channel(channelId)
