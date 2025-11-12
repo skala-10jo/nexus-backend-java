@@ -100,11 +100,19 @@ public class DocumentService {
         Document document = documentRepository.findByIdAndUserId(documentId, userId)
                 .orElseThrow(() -> new RuntimeException("Document not found"));
 
-        // Delete file from storage
-        fileStorageService.deleteFile(document.getFilePath());
+        String filePath = document.getFilePath();
 
-        // Delete from database
+        // Delete from database (CASCADE will handle project_documents relationships)
         documentRepository.delete(document);
+
+        // Then try to delete file from storage
+        // If this fails, the database record is already deleted
+        try {
+            fileStorageService.deleteFile(filePath);
+        } catch (Exception ex) {
+            // Log the error but don't fail the operation
+            System.err.println("Warning: Failed to delete file from storage: " + filePath);
+        }
     }
 
     public Page<DocumentResponse> searchDocuments(UUID userId, String query, Pageable pageable) {
