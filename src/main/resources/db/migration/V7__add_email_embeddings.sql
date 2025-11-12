@@ -1,4 +1,4 @@
--- V5: Add email embeddings table for RAG-based email search
+-- V7: Add email embeddings table for RAG-based email search
 -- Author: NEXUS Team
 -- Date: 2025-01-12
 
