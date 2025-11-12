@@ -54,6 +54,37 @@ public class User {
     @Column(name = "outlook_delta_link", columnDefinition = "TEXT")
     private String outlookDeltaLink; // For incremental sync
 
+    // Slack integration fields (same pattern as Outlook)
+    @Column(name = "slack_workspace_id")
+    private String slackWorkspaceId;
+
+    @Column(name = "slack_workspace_name")
+    private String slackWorkspaceName;
+
+    @Column(name = "slack_access_token", columnDefinition = "TEXT")
+    private String slackAccessToken;
+
+    @Column(name = "slack_bot_user_id")
+    private String slackBotUserId;
+
+    @Column(name = "slack_bot_access_token", columnDefinition = "TEXT")
+    private String slackBotAccessToken;
+
+    @Column(name = "slack_user_access_token", columnDefinition = "TEXT")
+    private String slackUserAccessToken;
+
+    @Column(name = "slack_scope", columnDefinition = "TEXT")
+    private String slackScope;
+
+    @Column(name = "slack_is_active")
+    private Boolean slackIsActive = false;
+
+    @Column(name = "slack_token_expires_at")
+    private LocalDateTime slackTokenExpiresAt;
+
+    @Column(name = "slack_connected_at")
+    private LocalDateTime slackConnectedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

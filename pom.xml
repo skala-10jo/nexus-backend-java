@@ -110,6 +110,13 @@
             <version>0.6</version>
         </dependency>
 
+        <!-- Slack SDK -->
+        <dependency>
+            <groupId>com.slack.api</groupId>
+            <artifactId>slack-api-client</artifactId>
+            <version>1.30.0</version>
+        </dependency>
+
         <!-- Environment Variables from .env file -->
         <dependency>
             <groupId>me.paulschwarz</groupId>
