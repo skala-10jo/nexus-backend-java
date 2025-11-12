@@ -34,20 +34,36 @@ COMMENT ON COLUMN users.slack_connected_at IS 'Timestamp when Slack was first co
 
 -- ============================================================
 -- 2. Migrate existing slack_integrations data to users table
+--    (Only if slack_integrations table exists)
 -- ============================================================
-UPDATE users u
-SET
-    slack_workspace_id = s.workspace_id,
-    slack_workspace_name = s.workspace_name,
-    slack_access_token = s.access_token,
-    slack_bot_user_id = s.bot_user_id,
-    slack_bot_access_token = s.bot_access_token,
-    slack_user_access_token = s.user_access_token,
-    slack_scope = s.scope,
-    slack_is_active = s.is_active,
-    slack_connected_at = s.created_at
-FROM slack_integrations s
-WHERE u.id = s.user_id;
+DO $$
+BEGIN
+    -- Check if slack_integrations table exists
+    IF EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_schema = 'public'
+        AND table_name = 'slack_integrations'
+    ) THEN
+        -- Migrate data from slack_integrations to users
+        UPDATE users u
+        SET
+            slack_workspace_id = s.workspace_id,
+            slack_workspace_name = s.workspace_name,
+            slack_access_token = s.access_token,
+            slack_bot_user_id = s.bot_user_id,
+            slack_bot_access_token = s.bot_access_token,
+            slack_user_access_token = s.user_access_token,
+            slack_scope = s.scope,
+            slack_is_active = s.is_active,
+            slack_connected_at = s.created_at
+        FROM slack_integrations s
+        WHERE u.id = s.user_id;
+
+        RAISE NOTICE 'Migrated data from slack_integrations to users table';
+    ELSE
+        RAISE NOTICE 'slack_integrations table does not exist, skipping data migration';
+    END IF;
+END $$;
 
 -- ============================================================
 -- 3. Create slack_messages table (no project_id - communication only)
