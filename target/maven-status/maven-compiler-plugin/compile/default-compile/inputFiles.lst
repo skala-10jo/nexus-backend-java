@@ -36,6 +36,7 @@
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/repository/UserRepository.java
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/dto/response/EmailResponse.java
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/repository/ScheduleRepository.java
+/Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/dto/response/GlossaryStatisticsResponse.java
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/dto/request/CategoryOrderRequest.java
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/controller/GlossaryController.java
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/controller/HealthController.java
