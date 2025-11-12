@@ -11,12 +11,18 @@ public class GlossaryTermRequest {
 
     private String englishTerm;
 
+    private String vietnameseTerm;
+
     private String abbreviation;
 
     @NotBlank(message = "Definition is required")
     private String definition;
 
     private String context;
+
+    private String exampleSentence;
+
+    private String note;
 
     private String domain;
 }

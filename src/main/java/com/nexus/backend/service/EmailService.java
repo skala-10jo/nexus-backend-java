@@ -8,6 +8,8 @@ import com.nexus.backend.dto.response.EmailResponse;
 import com.nexus.backend.entity.Email;
 import com.nexus.backend.entity.Project;
 import com.nexus.backend.entity.User;
+import com.nexus.backend.exception.ResourceNotFoundException;
+import com.nexus.backend.exception.ServiceException;
 import com.nexus.backend.repository.EmailRepository;
 import com.nexus.backend.repository.ProjectRepository;
 import com.nexus.backend.repository.UserRepository;
@@ -58,7 +60,7 @@ public class EmailService {
      */
     public EmailDetailResponse getEmailDetail(UUID userId, UUID emailId) {
         Email email = emailRepository.findByIdAndUserId(emailId, userId)
-                .orElseThrow(() -> new RuntimeException("Email not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Email", "id", emailId));
 
         return toEmailDetailResponse(email);
     }
@@ -77,10 +79,10 @@ public class EmailService {
     @Transactional
     public EmailResponse updateReadStatus(UUID userId, UUID emailId, UpdateReadStatusRequest request) {
         Email email = emailRepository.findByIdAndUserId(emailId, userId)
-                .orElseThrow(() -> new RuntimeException("Email not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Email", "id", emailId));
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
         // 1. DB 업데이트
         email.setIsRead(request.getIsRead());
@@ -110,11 +112,11 @@ public class EmailService {
     @Transactional
     public EmailResponse assignProject(UUID userId, UUID emailId, AssignProjectRequest request) {
         Email email = emailRepository.findByIdAndUserId(emailId, userId)
-                .orElseThrow(() -> new RuntimeException("Email not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Email", "id", emailId));
 
         if (request.getProjectId() != null) {
             Project project = projectRepository.findById(request.getProjectId())
-                    .orElseThrow(() -> new RuntimeException("Project not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Project", "id", request.getProjectId()));
             email.setProject(project);
         } else {
             email.setProject(null);
@@ -132,7 +134,7 @@ public class EmailService {
     @Transactional
     public void deleteEmail(UUID userId, UUID emailId) {
         Email email = emailRepository.findByIdAndUserId(emailId, userId)
-                .orElseThrow(() -> new RuntimeException("Email not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Email", "id", emailId));
 
         emailRepository.delete(email);
         log.info("Email deleted: {}", emailId);
@@ -154,6 +156,7 @@ public class EmailService {
                 .subject(email.getSubject())
                 .fromAddress(email.getFromAddress())
                 .fromName(email.getFromName())
+                .toRecipients(email.getToRecipients())  // 수신자 추가
                 .bodyPreview(email.getBodyPreview())
                 .hasAttachments(email.getHasAttachments())
                 .isRead(email.getIsRead())

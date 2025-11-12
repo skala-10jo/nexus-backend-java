@@ -1,3 +1,4 @@
+/Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/exception/UnauthorizedException.java
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/dto/response/UserResponse.java
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/dto/response/DocumentContentResponse.java
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/repository/DocumentMetadataRepository.java
@@ -20,6 +21,7 @@
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/controller/UserController.java
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/dto/response/DocumentMetadataDto.java
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/dto/request/RegisterRequest.java
+/Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/exception/ServiceException.java
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/entity/DocumentMetadata.java
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/dto/request/ProjectRequest.java
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/service/AuthService.java
@@ -27,6 +29,7 @@
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/entity/Project.java
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/repository/EmailAttachmentRepository.java
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/controller/OutlookAuthController.java
+/Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/exception/BadRequestException.java
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/service/ProjectService.java
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/service/ScheduleCategoryService.java
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/dto/request/UpdateReadStatusRequest.java
@@ -62,6 +65,7 @@
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/repository/DocumentContentRepository.java
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/entity/DocumentContent.java
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/service/DocumentService.java
+/Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/exception/ResourceNotFoundException.java
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/repository/ProjectRepository.java
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/controller/EmailSendController.java
 /Users/suji/skala/workspace/nexus/backend-java/src/main/java/com/nexus/backend/dto/request/UpdateUserRequest.java

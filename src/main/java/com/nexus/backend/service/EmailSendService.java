@@ -8,6 +8,9 @@ import com.microsoft.graph.models.Recipient;
 import com.microsoft.graph.serviceclient.GraphServiceClient;
 import com.nexus.backend.dto.request.SendEmailRequest;
 import com.nexus.backend.entity.User;
+import com.nexus.backend.exception.ResourceNotFoundException;
+import com.nexus.backend.exception.ServiceException;
+import com.nexus.backend.exception.UnauthorizedException;
 import com.nexus.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,16 +27,17 @@ public class EmailSendService {
 
     private final UserRepository userRepository;
     private final OutlookAuthService outlookAuthService;
+    private final EmailSyncService emailSyncService;
 
     /**
      * 메일 발송
      */
     public void sendEmail(UUID userId, SendEmailRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
         if (user.getOutlookAccessToken() == null) {
-            throw new RuntimeException("Outlook 계정이 연동되지 않았습니다");
+            throw new UnauthorizedException("Outlook 계정이 연동되지 않았습니다");
         }
 
         try {
@@ -96,9 +100,18 @@ public class EmailSendService {
 
             log.info("Email sent successfully from user: {}", userId);
 
+            // 보낸편지함 동기화 (비동기로 실행하여 메일 전송 응답 속도 유지)
+            try {
+                emailSyncService.syncSentItems(userId);
+                log.info("SentItems synced after sending email for user: {}", userId);
+            } catch (Exception syncError) {
+                // 동기화 실패해도 메일은 이미 전송되었으므로 로그만 남김
+                log.error("Failed to sync SentItems after sending email", syncError);
+            }
+
         } catch (Exception e) {
             log.error("Failed to send email", e);
-            throw new RuntimeException("메일 발송 실패: " + e.getMessage());
+            throw new ServiceException("메일 발송 실패: " + e.getMessage(), e);
         }
     }
 }

@@ -59,6 +59,37 @@ public class EmailSyncService {
     }
 
     /**
+     * 보낸편지함만 동기화 (메일 전송 후 호출용)
+     */
+    @Transactional
+    public int syncSentItems(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getOutlookAccessToken() == null) {
+            throw new RuntimeException("Outlook 계정이 연동되지 않았습니다");
+        }
+
+        try {
+            log.info("Syncing SentItems for user: {}", userId);
+
+            // GraphServiceClient 생성
+            com.microsoft.graph.serviceclient.GraphServiceClient graphClient =
+                    outlookAuthService.createGraphClient(user);
+
+            // SentItems만 동기화
+            int syncedCount = syncFolderMails(graphClient, user, "SentItems");
+
+            log.info("Synced {} new emails from SentItems for user: {}", syncedCount, userId);
+            return syncedCount;
+
+        } catch (Exception e) {
+            log.error("Failed to sync SentItems for user: {}", userId, e);
+            throw new RuntimeException("보낸메일함 동기화 실패: " + e.getMessage());
+        }
+    }
+
+    /**
      * 특정 폴더의 메일 동기화
      */
     private int syncFolderMails(

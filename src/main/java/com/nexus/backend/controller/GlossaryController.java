@@ -2,6 +2,7 @@ package com.nexus.backend.controller;
 
 import com.nexus.backend.dto.request.GlossaryTermRequest;
 import com.nexus.backend.dto.response.ExtractionJobResponse;
+import com.nexus.backend.dto.response.GlossaryStatisticsResponse;
 import com.nexus.backend.dto.response.GlossaryTermResponse;
 import com.nexus.backend.entity.User;
 import com.nexus.backend.service.GlossaryService;
@@ -170,5 +171,17 @@ public class GlossaryController {
         log.info("Unverifying glossary term: {} for user: {}", id, user.getId());
         GlossaryTermResponse term = glossaryService.unverifyTerm(id, user);
         return ResponseEntity.ok(term);
+    }
+
+    /**
+     * Get glossary statistics (with optional project filter)
+     */
+    @GetMapping("/statistics")
+    public ResponseEntity<GlossaryStatisticsResponse> getStatistics(
+            @RequestParam(required = false) UUID projectId,
+            @AuthenticationPrincipal User user) {
+        log.info("Getting glossary statistics for user: {} (projectId: {})", user.getId(), projectId);
+        GlossaryStatisticsResponse statistics = glossaryService.getStatistics(user, projectId);
+        return ResponseEntity.ok(statistics);
     }
 }
