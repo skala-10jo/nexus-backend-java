@@ -4,6 +4,7 @@ import com.nexus.backend.entity.GlossaryTerm;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -60,4 +61,16 @@ public interface GlossaryTermRepository extends JpaRepository<GlossaryTerm, UUID
     long countByProjectIdAndStatus(UUID projectId, String status);
 
     long countByProjectIdAndIsVerified(UUID projectId, boolean isVerified);
+
+    // Update project_id for terms associated with a document
+    @Modifying
+    @Query("UPDATE GlossaryTerm t SET t.project.id = :projectId " +
+           "WHERE EXISTS (SELECT 1 FROM t.documents d WHERE d.id = :documentId)")
+    int updateProjectIdForDocumentTerms(@Param("projectId") UUID projectId, @Param("documentId") UUID documentId);
+
+    // Clear project_id for terms associated with a document
+    @Modifying
+    @Query("UPDATE GlossaryTerm t SET t.project.id = NULL " +
+           "WHERE EXISTS (SELECT 1 FROM t.documents d WHERE d.id = :documentId)")
+    int clearProjectIdForDocumentTerms(@Param("documentId") UUID documentId);
 }

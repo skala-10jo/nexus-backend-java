@@ -27,6 +27,7 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final DocumentRepository documentRepository;
     private final ScheduleRepository scheduleRepository;
+    private final com.nexus.backend.repository.GlossaryTermRepository glossaryTermRepository;
 
     @Transactional(readOnly = true)
     public List<ProjectResponse> getUserProjects(User user) {
@@ -72,6 +73,13 @@ public class ProjectService {
         log.info("Created project: {} for user: {} with {} documents",
                 project.getId(), user.getId(), project.getDocuments().size());
 
+        // Update project_id for all terms associated with these documents
+        for (Document doc : project.getDocuments()) {
+            int updatedTerms = glossaryTermRepository.updateProjectIdForDocumentTerms(project.getId(), doc.getId());
+            log.info("Updated {} terms for document: {} with project_id: {}",
+                    updatedTerms, doc.getId(), project.getId());
+        }
+
         return ProjectResponse.from(project);
     }
 
@@ -90,7 +98,13 @@ public class ProjectService {
 
         // Update documents if documentIds provided
         if (request.getDocumentIds() != null) {
+            // Store old document IDs to detect changes
+            List<UUID> oldDocumentIds = project.getDocuments().stream()
+                    .map(Document::getId)
+                    .collect(Collectors.toList());
+
             project.getDocuments().clear();
+
             if (!request.getDocumentIds().isEmpty()) {
                 List<Document> documents = documentRepository.findAllById(request.getDocumentIds());
                 // Verify all documents belong to the user
@@ -100,6 +114,29 @@ public class ProjectService {
                     }
                 });
                 project.getDocuments().addAll(documents);
+            }
+
+            // Find removed documents (old - new)
+            List<UUID> removedDocumentIds = oldDocumentIds.stream()
+                    .filter(id -> !request.getDocumentIds().contains(id))
+                    .collect(Collectors.toList());
+
+            // Find added documents (new - old)
+            List<UUID> addedDocumentIds = request.getDocumentIds().stream()
+                    .filter(id -> !oldDocumentIds.contains(id))
+                    .collect(Collectors.toList());
+
+            // Clear project_id for terms of removed documents
+            for (UUID docId : removedDocumentIds) {
+                int clearedTerms = glossaryTermRepository.clearProjectIdForDocumentTerms(docId);
+                log.info("Cleared project_id for {} terms from removed document: {}", clearedTerms, docId);
+            }
+
+            // Set project_id for terms of added documents
+            for (UUID docId : addedDocumentIds) {
+                int updatedTerms = glossaryTermRepository.updateProjectIdForDocumentTerms(projectId, docId);
+                log.info("Updated {} terms for added document: {} with project_id: {}",
+                        updatedTerms, docId, projectId);
             }
         }
 
