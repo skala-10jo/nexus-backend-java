@@ -6,22 +6,28 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
-import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Common file entity for all file types (documents, videos, audio).
+ * This replaces the old 'Document' entity with clearer domain separation.
+ *
+ * @author NEXUS Team
+ * @version 1.0
+ * @since 2025-01-18
+ */
 @Entity
-@Table(name = "documents")
+@Table(name = "files")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Document {
+public class File {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -31,13 +37,14 @@ public class Document {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @ManyToMany(mappedBy = "documents")
-    private List<Project> projects = new ArrayList<>();
+    @Enumerated(EnumType.STRING)
+    @Column(name = "file_type", nullable = false, length = 20)
+    private FileType fileType;
 
-    @Column(name = "original_filename", nullable = false, length = 255)
+    @Column(name = "original_filename", nullable = false)
     private String originalFilename;
 
-    @Column(name = "stored_filename", nullable = false, unique = true, length = 255)
+    @Column(name = "stored_filename", nullable = false, unique = true)
     private String storedFilename;
 
     @Column(name = "file_path", nullable = false, length = 500)
@@ -46,30 +53,14 @@ public class Document {
     @Column(name = "file_size", nullable = false)
     private Long fileSize;
 
-    @Column(name = "file_type", nullable = false, length = 50)
-    private String fileType;
-
     @Column(name = "mime_type", nullable = false, length = 100)
     private String mimeType;
 
     @Column(name = "upload_date", nullable = false)
     private LocalDateTime uploadDate;
 
-    @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.VARCHAR)
-    @Column(name = "status", nullable = false)
-    private DocumentStatus status;
-
-    @Column(name = "is_analyzed", nullable = false)
-    @Builder.Default
-    private Boolean isAnalyzed = false;
-
-    @OneToOne(mappedBy = "document", cascade = CascadeType.ALL, orphanRemoval = true)
-    private DocumentMetadata metadata;
-
-    @OneToMany(mappedBy = "document", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<DocumentContent> contents = new ArrayList<>();
+    @Column(name = "status", nullable = false, length = 20)
+    private String status;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -78,4 +69,20 @@ public class Document {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    // Relationships
+    @ManyToMany
+    @JoinTable(
+        name = "project_files",
+        joinColumns = @JoinColumn(name = "file_id"),
+        inverseJoinColumns = @JoinColumn(name = "project_id")
+    )
+    @Builder.Default
+    private List<Project> projects = new ArrayList<>();
+
+    @OneToOne(mappedBy = "file", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private DocumentFile documentFile;
+
+    @OneToOne(mappedBy = "file", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private VideoFile videoFile;
 }

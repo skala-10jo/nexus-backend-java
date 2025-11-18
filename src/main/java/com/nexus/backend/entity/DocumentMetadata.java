@@ -23,8 +23,8 @@ public class DocumentMetadata {
     private UUID id;
 
     @OneToOne
-    @JoinColumn(name = "document_id", nullable = false)
-    private Document document;
+    @JoinColumn(name = "file_id", nullable = false)
+    private File file;
 
     @Column(length = 10)
     private String language;

@@ -10,8 +10,6 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -79,15 +77,6 @@ public class GlossaryTerm {
     @Column(name = "usage_count")
     @Builder.Default
     private Integer usageCount = 0;
-
-    @ManyToMany
-    @JoinTable(
-        name = "glossary_term_documents",
-        joinColumns = @JoinColumn(name = "term_id"),
-        inverseJoinColumns = @JoinColumn(name = "document_id")
-    )
-    @Builder.Default
-    private List<Document> documents = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

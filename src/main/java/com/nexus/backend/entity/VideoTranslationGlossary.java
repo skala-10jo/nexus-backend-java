@@ -13,7 +13,7 @@ import java.util.UUID;
 @Entity
 @Table(
     name = "video_translation_glossaries",
-    uniqueConstraints = @UniqueConstraint(columnNames = {"video_document_id", "document_id"})
+    uniqueConstraints = @UniqueConstraint(columnNames = {"video_file_id", "file_id"})
 )
 @Data
 @Builder
@@ -26,12 +26,12 @@ public class VideoTranslationGlossary {
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "video_document_id", nullable = false)
-    private VideoDocument videoDocument;
+    @JoinColumn(name = "video_file_id", nullable = false)
+    private VideoFile videoFile;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "document_id", nullable = false)
-    private Document document;
+    @JoinColumn(name = "file_id", nullable = false)
+    private File file;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
