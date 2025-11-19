@@ -17,6 +17,7 @@ import com.slack.api.model.Conversation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +35,7 @@ public class SlackService {
 
     private final UserRepository userRepository;
     private final Slack slack = Slack.getInstance();
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Value("${slack.client-id}")
     private String clientId;
@@ -271,7 +273,53 @@ public class SlackService {
     }
 
     /**
-     * Send a message to a Slack channel or DM
+     * Get Slack user display name using any available bot token
+     * Used by Event API to get real names for incoming messages
+     */
+    public String getSlackUserDisplayName(String slackUserId) {
+        // Find any user with active Slack integration to get a token
+        List<User> slackUsers = userRepository.findAll().stream()
+                .filter(u -> u.getSlackBotAccessToken() != null && Boolean.TRUE.equals(u.getSlackIsActive()))
+                .toList();
+
+        if (slackUsers.isEmpty()) {
+            log.warn("No active Slack integration found to fetch user info");
+            return "Slack User";
+        }
+
+        // Use the first available token (all should work for the same workspace)
+        String token = slackUsers.get(0).getSlackBotAccessToken();
+        return getUserDisplayName(token, slackUserId);
+    }
+
+    /**
+     * Send a message to Slack and broadcast via WebSocket
+     */
+    @Transactional(readOnly = true)
+    public void sendMessageAndBroadcast(SendSlackMessageRequest request, User user) {
+        // Send to Slack
+        sendMessage(request, user);
+
+        // Broadcast to WebSocket subscribers
+        SlackMessageResponse messageResponse = SlackMessageResponse.builder()
+                .text(request.getText())
+                .channelId(request.getChannelId())
+                .userId(user.getId().toString())
+                .username(user.getUsername())
+                .timestamp(LocalDateTime.now().toString())
+                .type("text")
+                .build();
+
+        messagingTemplate.convertAndSend(
+                "/topic/slack/" + request.getChannelId(),
+                messageResponse
+        );
+
+        log.info("Message broadcasted via WebSocket to channel: {}", request.getChannelId());
+    }
+
+    /**
+     * Send a message to a Slack channel or DM (without WebSocket broadcast)
      */
     @Transactional(readOnly = true)
     public void sendMessage(SendSlackMessageRequest request, User user) {
@@ -347,18 +395,44 @@ public class SlackService {
 
             log.info("Fetched {} messages from channel {}", response.getMessages().size(), channelId);
 
+            // Get current user's Slack user ID by making an auth.test call
+            String currentUserSlackId = null;
+            try {
+                var authResponse = slack.methods(token).authTest(req -> req);
+                if (authResponse.isOk()) {
+                    currentUserSlackId = authResponse.getUserId();
+                    log.info("Current user's Slack ID: {}", currentUserSlackId);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to get current user's Slack ID", e);
+            }
+
+            final String finalCurrentUserSlackId = currentUserSlackId;
+
             return response.getMessages().stream()
                     .map(message -> {
                         String username = null;
+                        String slackUserId = null;
+
                         if (message.getUser() != null) {
-                            username = getUserDisplayName(token, message.getUser());
+                            slackUserId = message.getUser();
+                            username = getUserDisplayName(token, slackUserId);
                         } else if (message.getBotId() != null) {
                             username = message.getUsername() != null ? message.getUsername() : "Bot";
+                        }
+
+                        // Check if this message is from the current user
+                        // Compare Slack user ID with the current user's Slack ID from auth.test
+                        String userId = null;
+                        if (slackUserId != null && slackUserId.equals(finalCurrentUserSlackId)) {
+                            // This message is from the current logged-in user
+                            userId = user.getId().toString();
                         }
 
                         return SlackMessageResponse.builder()
                                 .text(message.getText())
                                 .user(message.getUser())
+                                .userId(userId)
                                 .username(username)
                                 .timestamp(message.getTs())
                                 .botId(message.getBotId())
