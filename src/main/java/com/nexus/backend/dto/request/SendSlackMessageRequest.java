@@ -15,4 +15,7 @@ public class SendSlackMessageRequest {
 
     @NotBlank(message = "Message text is required")
     private String text;
+
+    // Username for WebSocket authentication fallback
+    private String username;
 }

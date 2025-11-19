@@ -16,4 +16,7 @@ public class SlackMessageResponse {
     private String username;
     private String timestamp;
     private String botId;
+    private String channelId;
+    private String userId;
+    private String type;  // "text" or "file_notification"
 }
