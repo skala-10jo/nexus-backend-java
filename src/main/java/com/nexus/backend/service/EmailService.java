@@ -15,11 +15,18 @@ import com.nexus.backend.repository.ProjectRepository;
 import com.nexus.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -31,6 +38,10 @@ public class EmailService {
     private final UserRepository userRepository;
     private final ProjectRepository projectRepository;
     private final OutlookAuthService outlookAuthService;
+    private final RestTemplate restTemplate;
+
+    @Value("${python.api.url:http://localhost:8000}")
+    private String pythonApiUrl;
 
     /**
      * 메일 목록 조회
@@ -125,7 +136,35 @@ public class EmailService {
         emailRepository.save(email);
         log.info("Project assigned to email: {}", emailId);
 
+        // Qdrant Payload 업데이트 (Python Backend 호출)
+        updateQdrantPayload(emailId, request.getProjectId());
+
         return toEmailResponse(email);
+    }
+
+    /**
+     * Qdrant Payload 업데이트 (Python Backend API 호출)
+     */
+    private void updateQdrantPayload(UUID emailId, UUID projectId) {
+        try {
+            String url = pythonApiUrl + "/api/ai/mail/emails/" + emailId + "/project";
+
+            // Query parameter로 projectId 전달
+            if (projectId != null) {
+                url += "?project_id=" + projectId;
+            }
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<Void> request = new HttpEntity<>(headers);
+
+            restTemplate.patchForObject(url, request, Map.class);
+            log.info("Qdrant payload updated for email: {}, projectId: {}", emailId, projectId);
+        } catch (Exception e) {
+            log.error("Failed to update Qdrant payload for email: {}, error: {}", emailId, e.getMessage());
+            // Qdrant 업데이트 실패해도 PostgreSQL은 이미 저장되었으므로 예외를 던지지 않음
+        }
     }
 
     /**
