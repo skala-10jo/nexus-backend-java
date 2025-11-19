@@ -85,7 +85,7 @@ public class GlossaryService {
 
                 PythonExtractionRequest request = PythonExtractionRequest.builder()
                         .jobId(savedJob.getId())
-                        .documentId(fileId)  // Keeping field name for backward compatibility
+                        .fileId(fileId)
                         .filePath(file.getFilePath())
                         .userId(user.getId())
                         .projectId(projectId)
@@ -129,15 +129,16 @@ public class GlossaryService {
     }
 
     // Project-level queries (filtered)
+    // Use project files approach instead of project_id to handle terms extracted before project assignment
     @Transactional(readOnly = true)
     public Page<GlossaryTermResponse> findTermsByProject(UUID projectId, Pageable pageable) {
-        return glossaryTermRepository.findByProjectId(projectId, pageable)
+        return glossaryTermRepository.findTermsByProjectFiles(projectId, pageable)
                 .map(GlossaryTermResponse::from);
     }
 
     @Transactional(readOnly = true)
     public Page<GlossaryTermResponse> searchTermsByProject(UUID projectId, String query, Pageable pageable) {
-        return glossaryTermRepository.searchByProjectIdAndQuery(projectId, query, pageable)
+        return glossaryTermRepository.searchTermsByProjectFiles(projectId, query, pageable)
                 .map(GlossaryTermResponse::from);
     }
 
@@ -265,13 +266,13 @@ public class GlossaryService {
         long userEditedTerms;
 
         if (projectId != null) {
-            // Project-level statistics
-            totalTerms = glossaryTermRepository.countByProjectId(projectId);
-            verifiedTerms = glossaryTermRepository.countByProjectIdAndIsVerified(projectId, true);
-            unverifiedTerms = glossaryTermRepository.countByProjectIdAndIsVerified(projectId, false);
-            autoExtractedTerms = glossaryTermRepository.countByProjectIdAndStatus(projectId, "AUTO_EXTRACTED");
-            userAddedTerms = glossaryTermRepository.countByProjectIdAndStatus(projectId, "USER_ADDED");
-            userEditedTerms = glossaryTermRepository.countByProjectIdAndStatus(projectId, "USER_EDITED");
+            // Project-level statistics (use project files approach)
+            totalTerms = glossaryTermRepository.countTermsByProjectFiles(projectId);
+            verifiedTerms = glossaryTermRepository.countTermsByProjectFilesAndIsVerified(projectId, true);
+            unverifiedTerms = glossaryTermRepository.countTermsByProjectFilesAndIsVerified(projectId, false);
+            autoExtractedTerms = glossaryTermRepository.countTermsByProjectFilesAndStatus(projectId, "AUTO_EXTRACTED");
+            userAddedTerms = glossaryTermRepository.countTermsByProjectFilesAndStatus(projectId, "USER_ADDED");
+            userEditedTerms = glossaryTermRepository.countTermsByProjectFilesAndStatus(projectId, "USER_EDITED");
         } else {
             // User-level statistics
             totalTerms = glossaryTermRepository.countByUserId(user.getId());

@@ -17,8 +17,8 @@ public class PythonExtractionRequest {
     @JsonProperty("job_id")
     private UUID jobId;
 
-    @JsonProperty("document_id")
-    private UUID documentId;
+    @JsonProperty("file_id")
+    private UUID fileId;
 
     @JsonProperty("file_path")
     private String filePath;

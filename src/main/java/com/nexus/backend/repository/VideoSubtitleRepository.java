@@ -13,42 +13,42 @@ import java.util.UUID;
 public interface VideoSubtitleRepository extends JpaRepository<VideoSubtitle, UUID> {
 
     /**
-     * VideoDocument ID로 모든 자막 조회 (시퀀스 순서대로)
+     * VideoFile ID로 모든 자막 조회 (시퀀스 순서대로)
      */
     @Query("SELECT vs FROM VideoSubtitle vs " +
-           "WHERE vs.videoDocument.id = :videoDocumentId " +
+           "WHERE vs.videoFile.id = :videoFileId " +
            "ORDER BY vs.sequenceNumber ASC")
-    List<VideoSubtitle> findByVideoDocumentIdOrderBySequenceNumber(
-        @Param("videoDocumentId") UUID videoDocumentId
+    List<VideoSubtitle> findByVideoFileIdOrderBySequenceNumber(
+        @Param("videoFileId") UUID videoFileId
     );
 
     /**
-     * VideoDocument ID로 번역된 자막만 조회
+     * VideoFile ID로 번역된 자막만 조회
      */
     @Query("SELECT vs FROM VideoSubtitle vs " +
-           "WHERE vs.videoDocument.id = :videoDocumentId " +
+           "WHERE vs.videoFile.id = :videoFileId " +
            "AND vs.translatedText IS NOT NULL " +
            "ORDER BY vs.sequenceNumber ASC")
     List<VideoSubtitle> findTranslatedSubtitles(
-        @Param("videoDocumentId") UUID videoDocumentId
+        @Param("videoFileId") UUID videoFileId
     );
 
     /**
      * 특정 시간 범위의 자막 조회
      */
     @Query("SELECT vs FROM VideoSubtitle vs " +
-           "WHERE vs.videoDocument.id = :videoDocumentId " +
+           "WHERE vs.videoFile.id = :videoFileId " +
            "AND vs.startTimeMs <= :endTimeMs " +
            "AND vs.endTimeMs >= :startTimeMs " +
            "ORDER BY vs.sequenceNumber ASC")
     List<VideoSubtitle> findByTimeRange(
-        @Param("videoDocumentId") UUID videoDocumentId,
+        @Param("videoFileId") UUID videoFileId,
         @Param("startTimeMs") Long startTimeMs,
         @Param("endTimeMs") Long endTimeMs
     );
 
     /**
-     * VideoDocument ID로 자막 전체 삭제
+     * VideoFile ID로 자막 전체 삭제
      */
-    void deleteByVideoDocumentId(UUID videoDocumentId);
+    void deleteByVideoFileId(UUID videoFileId);
 }

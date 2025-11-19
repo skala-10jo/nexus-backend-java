@@ -28,7 +28,7 @@ public class ExtractionJobResponse {
     public static ExtractionJobResponse from(GlossaryExtractionJob job) {
         return ExtractionJobResponse.builder()
                 .id(job.getId())
-                .documentId(job.getDocument().getId())
+                .documentId(job.getFile().getId())
                 .status(job.getStatus())
                 .progress(job.getProgress())
                 .termsExtracted(job.getTermsExtracted())

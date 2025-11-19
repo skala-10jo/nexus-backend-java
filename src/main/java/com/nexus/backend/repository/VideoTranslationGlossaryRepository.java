@@ -13,25 +13,25 @@ import java.util.UUID;
 public interface VideoTranslationGlossaryRepository extends JpaRepository<VideoTranslationGlossary, UUID> {
 
     /**
-     * VideoDocument ID로 선택된 용어집 문서 목록 조회
+     * VideoFile ID로 선택된 용어집 파일 목록 조회
      */
     @Query("SELECT vtg FROM VideoTranslationGlossary vtg " +
-           "WHERE vtg.videoDocument.id = :videoDocumentId")
-    List<VideoTranslationGlossary> findByVideoDocumentId(
-        @Param("videoDocumentId") UUID videoDocumentId
+           "WHERE vtg.videoFile.id = :videoFileId")
+    List<VideoTranslationGlossary> findByVideoFileId(
+        @Param("videoFileId") UUID videoFileId
     );
 
     /**
-     * VideoDocument ID로 선택된 Document ID 목록 조회
+     * VideoFile ID로 선택된 File ID 목록 조회
      */
-    @Query("SELECT vtg.document.id FROM VideoTranslationGlossary vtg " +
-           "WHERE vtg.videoDocument.id = :videoDocumentId")
-    List<UUID> findDocumentIdsByVideoDocumentId(
-        @Param("videoDocumentId") UUID videoDocumentId
+    @Query("SELECT vtg.file.id FROM VideoTranslationGlossary vtg " +
+           "WHERE vtg.videoFile.id = :videoFileId")
+    List<UUID> findFileIdsByVideoFileId(
+        @Param("videoFileId") UUID videoFileId
     );
 
     /**
-     * VideoDocument ID로 모든 용어집 매핑 삭제
+     * VideoFile ID로 모든 용어집 매핑 삭제
      */
-    void deleteByVideoDocumentId(UUID videoDocumentId);
+    void deleteByVideoFileId(UUID videoFileId);
 }

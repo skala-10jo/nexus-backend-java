@@ -33,11 +33,11 @@ public class ProjectResponse {
                 .name(project.getName())
                 .description(project.getDescription())
                 .status(project.getStatus())
-                .documentCount(project.getDocuments() != null ? project.getDocuments().size() : 0)
+                .documentCount(project.getFiles() != null ? project.getFiles().size() : 0)
                 .termCount(project.getGlossaryTerms() != null ? project.getGlossaryTerms().size() : 0)
-                .documentIds(project.getDocuments() != null ?
-                        project.getDocuments().stream()
-                                .map(doc -> doc.getId())
+                .documentIds(project.getFiles() != null ?
+                        project.getFiles().stream()
+                                .map(file -> file.getId())
                                 .collect(Collectors.toList()) :
                         List.of())
                 .createdAt(project.getCreatedAt())
