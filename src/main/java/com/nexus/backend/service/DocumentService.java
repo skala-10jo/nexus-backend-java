@@ -33,7 +33,12 @@ public class DocumentService {
     private static final List<String> ALLOWED_MIME_TYPES = Arrays.asList(
             "application/pdf",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            "text/plain"
+            "text/plain",
+            // Video formats
+            "video/mp4",
+            "video/x-msvideo",      // AVI
+            "video/quicktime",       // MOV
+            "video/x-matroska"       // MKV
     );
 
     @Transactional
