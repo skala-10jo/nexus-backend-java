@@ -216,11 +216,10 @@ public class OutlookAuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Delete all emails for this user
-        emailRepository.deleteByUserId(userId);
-        log.info("Deleted all emails for user: {}", userId);
+        // 메일 데이터는 유지 (프로젝트 할당 등 보존)
+        // emailRepository.deleteByUserId(userId);  // 삭제하지 않음!
 
-        // Clear Outlook authentication data
+        // Clear Outlook authentication data only
         user.setOutlookEmail(null);
         user.setOutlookAccessToken(null);
         user.setOutlookRefreshToken(null);
@@ -228,7 +227,7 @@ public class OutlookAuthService {
         user.setOutlookDeltaLink(null);
 
         userRepository.save(user);
-        log.info("Outlook disconnected for user: {}", userId);
+        log.info("Outlook disconnected for user: {} (emails preserved)", userId);
     }
 
     /**

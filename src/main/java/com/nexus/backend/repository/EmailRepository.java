@@ -4,6 +4,7 @@ import com.nexus.backend.entity.Email;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -69,4 +70,15 @@ public interface EmailRepository extends JpaRepository<Email, UUID> {
                                @Param("folder") String folder,
                                @Param("projectId") UUID projectId,
                                Pageable pageable);
+
+    // Get messageIds for specific user and folder (for sync deletion detection)
+    @Query("SELECT e.messageId FROM Email e WHERE e.user.id = :userId AND e.folder = :folder")
+    List<String> findMessageIdsByUserIdAndFolder(@Param("userId") UUID userId,
+                                                   @Param("folder") String folder);
+
+    // Bulk delete by messageIds and userId (한 번에 여러 개 삭제)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("DELETE FROM Email e WHERE e.messageId IN :messageIds AND e.user.id = :userId")
+    void deleteByMessageIdsAndUserId(@Param("messageIds") List<String> messageIds,
+                                       @Param("userId") UUID userId);
 }
