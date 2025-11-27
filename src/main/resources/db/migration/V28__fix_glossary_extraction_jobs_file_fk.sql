@@ -1,35 +1,48 @@
--- V28: Remove legacy document_id column from glossary_extraction_jobs
+-- V28: Migrate glossary_extraction_jobs from document_id to file_id
 --
 -- Background:
 -- - V1 created glossary_extraction_jobs with document_id referencing documents table
 -- - V14-V24 migrated documents → files (unified file system)
 -- - V24 dropped documents table (FK was CASCADE deleted)
--- - Hibernate added file_id column with FK and unique constraint
--- - But document_id column still exists with NOT NULL constraint
--- - This causes "null value in document_id" error on INSERT
+-- - Need to add file_id column and remove legacy document_id column
 --
--- Current DB state (verified):
--- - file_id column: EXISTS, NOT NULL, FK exists, unique constraint exists ✓
--- - document_id column: EXISTS, NOT NULL, FK deleted, unique constraint exists, index exists
---
--- This migration only needs to remove document_id and its constraints
+-- This migration:
+-- 1. Adds file_id column (if not exists)
+-- 2. Removes document_id column and its constraints
+-- 3. Adds proper FK and index for file_id
 
--- Step 1: Drop document_id unique constraint
+-- Step 1: Add file_id column if not exists
+ALTER TABLE glossary_extraction_jobs
+    ADD COLUMN IF NOT EXISTS file_id UUID;
+
+-- Step 2: Drop document_id unique constraint
 ALTER TABLE glossary_extraction_jobs
     DROP CONSTRAINT IF EXISTS glossary_extraction_jobs_document_unique CASCADE;
 
--- Step 2: Drop document_id index
+-- Step 3: Drop document_id index
 DROP INDEX IF EXISTS idx_glossary_jobs_document_id;
 
--- Step 3: Drop document_id column
+-- Step 4: Drop document_id column
 ALTER TABLE glossary_extraction_jobs
     DROP COLUMN IF EXISTS document_id;
 
--- Step 4: Add file_id index (currently missing)
+-- Step 5: Add file_id unique constraint
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE constraint_name = 'glossary_extraction_jobs_file_unique'
+        AND table_name = 'glossary_extraction_jobs'
+    ) THEN
+        ALTER TABLE glossary_extraction_jobs
+            ADD CONSTRAINT glossary_extraction_jobs_file_unique UNIQUE (file_id);
+    END IF;
+END $$;
+
+-- Step 6: Add file_id index
 CREATE INDEX IF NOT EXISTS idx_glossary_jobs_file_id ON glossary_extraction_jobs(file_id);
 
--- Step 5: Rename Hibernate-generated FK to standard naming (optional, for consistency)
--- First drop existing FK, then add with proper name
+-- Step 7: Add FK constraint (drop Hibernate-generated one if exists, then add with proper name)
 DO $$
 BEGIN
     -- Drop Hibernate-generated FK if exists
@@ -53,6 +66,6 @@ BEGIN
     END IF;
 END $$;
 
--- Step 6: Update comments
+-- Step 8: Update comments
 COMMENT ON TABLE glossary_extraction_jobs IS 'Tracks background jobs for extracting glossary terms from files';
 COMMENT ON COLUMN glossary_extraction_jobs.file_id IS 'Reference to the file being processed for glossary extraction';
