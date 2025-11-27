@@ -18,4 +18,12 @@ public interface GlossaryExtractionJobRepository extends JpaRepository<GlossaryE
     List<GlossaryExtractionJob> findByStatus(String status);
 
     boolean existsByFileId(UUID fileId);
+
+    /**
+     * Delete all extraction jobs for a specific file.
+     * Used when deleting a file to clean up related jobs.
+     *
+     * @param fileId the file ID
+     */
+    void deleteByFileId(UUID fileId);
 }

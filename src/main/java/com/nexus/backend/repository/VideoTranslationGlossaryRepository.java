@@ -34,4 +34,12 @@ public interface VideoTranslationGlossaryRepository extends JpaRepository<VideoT
      * VideoFile ID로 모든 용어집 매핑 삭제
      */
     void deleteByVideoFileId(UUID videoFileId);
+
+    /**
+     * File ID (용어집 파일)로 모든 매핑 삭제.
+     * 용어집 파일 삭제 시 해당 파일과 연결된 비디오 매핑 정리.
+     *
+     * @param fileId the glossary file ID
+     */
+    void deleteByFileId(UUID fileId);
 }
