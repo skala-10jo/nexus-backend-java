@@ -38,6 +38,10 @@ public class FileService {
     private final FileRepository fileRepository;
     private final DocumentFileRepository documentFileRepository;
     private final VideoFileRepository videoFileRepository;
+    private final DocumentMetadataRepository documentMetadataRepository;
+    private final DocumentContentRepository documentContentRepository;
+    private final GlossaryExtractionJobRepository glossaryExtractionJobRepository;
+    private final VideoTranslationGlossaryRepository videoTranslationGlossaryRepository;
 
     // Services
     private final FileStorageService fileStorageService;
@@ -191,18 +195,75 @@ public class FileService {
     }
 
     /**
-     * Delete a file.
+     * Delete a file and all related data.
+     *
+     * This method safely deletes a file by:
+     * 1. Removing all FK-constrained related records first
+     * 2. Clearing ManyToMany relationships (project_files)
+     * 3. Deleting the physical file from storage
+     * 4. Deleting the File entity (cascades to DocumentFile/VideoFile)
      *
      * @param fileId file ID
      * @param userId user ID
+     * @throws RuntimeException if file not found or deletion fails
      */
     @Transactional
     public void deleteFile(UUID fileId, UUID userId) {
         File file = fileRepository.findByIdAndUserId(fileId, userId)
                 .orElseThrow(() -> new RuntimeException("File not found"));
 
-        fileRepository.delete(file);
-        log.info("Deleted file: {}", fileId);
+        log.info("Starting file deletion: fileId={}, filename={}", fileId, file.getOriginalFilename());
+
+        try {
+            // 1. Delete related records that have FK constraints (no cascade)
+            // Order matters: delete dependent records first
+
+            // Document-related cleanup
+            documentMetadataRepository.deleteByFileId(fileId);
+            log.debug("Deleted document_metadata for file: {}", fileId);
+
+            documentContentRepository.deleteByFileId(fileId);
+            log.debug("Deleted document_content for file: {}", fileId);
+
+            // Glossary extraction jobs cleanup
+            glossaryExtractionJobRepository.deleteByFileId(fileId);
+            log.debug("Deleted glossary_extraction_jobs for file: {}", fileId);
+
+            // Video translation glossary mappings cleanup (for glossary files)
+            videoTranslationGlossaryRepository.deleteByFileId(fileId);
+            log.debug("Deleted video_translation_glossaries for file: {}", fileId);
+
+            // 2. Clear ManyToMany relationships (project_files join table)
+            if (file.getProjects() != null && !file.getProjects().isEmpty()) {
+                file.getProjects().clear();
+                log.debug("Cleared project associations for file: {}", fileId);
+            }
+
+            // 3. Delete physical file from storage
+            String filePath = file.getFilePath();
+            if (filePath != null && !filePath.isEmpty()) {
+                try {
+                    fileStorageService.deleteFile(filePath);
+                    log.debug("Deleted physical file: {}", filePath);
+                } catch (Exception e) {
+                    // Log warning but continue with DB deletion
+                    // Physical file might already be deleted or moved
+                    log.warn("Failed to delete physical file (continuing): path={}, error={}",
+                            filePath, e.getMessage());
+                }
+            }
+
+            // 4. Delete File entity (cascades to DocumentFile/VideoFile via CascadeType.ALL)
+            // Note: glossary_term_documents is handled by DB-level CASCADE
+            fileRepository.delete(file);
+
+            log.info("Successfully deleted file: fileId={}, filename={}",
+                    fileId, file.getOriginalFilename());
+
+        } catch (Exception e) {
+            log.error("Failed to delete file: fileId={}, error={}", fileId, e.getMessage(), e);
+            throw new RuntimeException("Failed to delete file: " + e.getMessage(), e);
+        }
     }
 
     // Mapping methods
