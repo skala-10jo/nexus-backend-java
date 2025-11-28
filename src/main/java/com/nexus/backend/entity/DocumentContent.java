@@ -23,8 +23,8 @@ public class DocumentContent {
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "document_id", nullable = false)
-    private Document document;
+    @JoinColumn(name = "file_id", nullable = false)
+    private File file;
 
     @Column(name = "page_number")
     private Integer pageNumber;

@@ -11,7 +11,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +29,7 @@ public class EmailSyncService {
 
     /**
      * 사용자 메일 동기화 (Inbox + SentItems)
+     * 삭제 감지 포함
      */
     @Transactional
     public int syncUserEmails(UUID userId) {
@@ -43,10 +49,10 @@ public class EmailSyncService {
 
             int totalSynced = 0;
 
-            // Inbox 동기화
+            // Inbox 동기화 (삭제 감지 포함)
             totalSynced += syncFolderMails(graphClient, user, "Inbox");
 
-            // SentItems 동기화
+            // SentItems 동기화 (삭제 감지 포함)
             totalSynced += syncFolderMails(graphClient, user, "SentItems");
 
             log.info("Total synced {} new emails for user: {}", totalSynced, userId);
@@ -100,7 +106,43 @@ public class EmailSyncService {
         try {
             log.info("Syncing folder: {} for user: {}", folderName, user.getId());
 
-            // 폴더별 메일 가져오기
+            // [1단계] 모든 메일 ID만 먼저 가져오기 (삭제 감지용, 경량)
+            Set<String> allOutlookMessageIds = new HashSet<>();
+            try {
+                com.microsoft.graph.models.MessageCollectionResponse allIdsResponse =
+                        graphClient.me()
+                                .mailFolders()
+                                .byMailFolderId(folderName)
+                                .messages()
+                                .get(requestConfig -> {
+                                    requestConfig.queryParameters.top = 999;  // 최대한 많이
+                                    requestConfig.queryParameters.select = new String[]{"id", "parentFolderId"};  // ID와 폴더 ID
+                                });
+
+                if (allIdsResponse != null && allIdsResponse.getValue() != null) {
+                    log.info("Raw response from Outlook: {} messages", allIdsResponse.getValue().size());
+
+                    for (var msg : allIdsResponse.getValue()) {
+                        allOutlookMessageIds.add(msg.getId());
+                    }
+
+                    // 처음 3개 ID 샘플 로그
+                    List<String> sampleIds = allOutlookMessageIds.stream()
+                        .limit(3)
+                        .collect(Collectors.toList());
+                    log.info("Retrieved {} total message IDs from Outlook folder: {} (sample: {})",
+                        allOutlookMessageIds.size(), folderName, sampleIds);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to fetch all message IDs, will skip deletion detection: {}", e.getMessage(), e);
+            }
+
+            // [2단계] 삭제된 메일 먼저 제거
+            if (!allOutlookMessageIds.isEmpty()) {
+                detectAndDeleteRemovedEmails(user.getId(), folderName, allOutlookMessageIds);
+            }
+
+            // [3단계] 최신 메일 상세 정보 가져오기 (신규/업데이트용)
             com.microsoft.graph.models.MessageCollectionResponse messagesResponse =
                     graphClient.me()
                             .mailFolders()
@@ -126,7 +168,7 @@ public class EmailSyncService {
             int skippedCount = 0;
             int totalCount = messagesResponse.getValue().size();
 
-            log.info("Retrieved {} messages from folder: {}", totalCount, folderName);
+            log.info("Retrieved {} recent messages from folder: {}", totalCount, folderName);
 
             for (com.microsoft.graph.models.Message graphMessage : messagesResponse.getValue()) {
                 // 이미 존재하는 메일인지 확인 (해당 사용자의 메일만)
@@ -147,8 +189,8 @@ public class EmailSyncService {
                 log.debug("Saved email: {} - folder: {}", email.getSubject(), folderName);
             }
 
-            log.info("Folder '{}' sync complete: {} new, {} skipped, {} total",
-                folderName, syncedCount, skippedCount, totalCount);
+            log.info("Folder '{}' sync complete: {} new, {} skipped, {} total in Outlook",
+                folderName, syncedCount, skippedCount, allOutlookMessageIds.size());
             return syncedCount;
 
         } catch (Exception e) {
@@ -230,6 +272,65 @@ public class EmailSyncService {
         email.setSyncedAt(LocalDateTime.now());
 
         return email;
+    }
+
+    /**
+     * Outlook에서 삭제된 메일을 DB에서도 제거
+     *
+     * @param userId 사용자 ID
+     * @param folderName 폴더 이름
+     * @param outlookMessageIds Outlook에서 가져온 현재 메일 ID 목록
+     * @return 삭제된 메일 개수
+     */
+    private int detectAndDeleteRemovedEmails(UUID userId, String folderName, Set<String> outlookMessageIds) {
+        try {
+            // DB에서 해당 사용자의 해당 폴더 메일 ID 목록 조회
+            List<String> dbMessageIds = emailRepository.findMessageIdsByUserIdAndFolder(userId, folderName);
+
+            // DB 샘플 3개 로그
+            List<String> dbSampleIds = dbMessageIds.stream()
+                .limit(3)
+                .collect(Collectors.toList());
+
+            // Outlook 샘플 3개 로그
+            List<String> outlookSampleIds = outlookMessageIds.stream()
+                .limit(3)
+                .collect(Collectors.toList());
+
+            log.info("DB has {} emails in folder '{}' (sample: {})",
+                dbMessageIds.size(), folderName, dbSampleIds);
+            log.info("Outlook has {} emails in folder '{}' (sample: {})",
+                outlookMessageIds.size(), folderName, outlookSampleIds);
+
+            // DB에만 있고 Outlook에는 없는 메일 찾기
+            List<String> messageIdsToDelete = new ArrayList<>();
+            for (String dbMessageId : dbMessageIds) {
+                if (!outlookMessageIds.contains(dbMessageId)) {
+                    messageIdsToDelete.add(dbMessageId);
+                }
+            }
+
+            log.info("Found {} emails to delete from folder '{}' (to be deleted: {})",
+                messageIdsToDelete.size(), folderName,
+                messageIdsToDelete.size() > 0 ? messageIdsToDelete.subList(0, Math.min(3, messageIdsToDelete.size())) : "none");
+
+            // 삭제할 메일이 있으면 한 번에 벌크 삭제
+            if (!messageIdsToDelete.isEmpty()) {
+                log.info("Deleting {} emails from folder '{}' that were removed from Outlook: {}",
+                    messageIdsToDelete.size(), folderName, messageIdsToDelete);
+
+                emailRepository.deleteByMessageIdsAndUserId(messageIdsToDelete, userId);
+
+                log.info("Successfully deleted {} emails from folder '{}'", messageIdsToDelete.size(), folderName);
+                return messageIdsToDelete.size();
+            }
+
+            return 0;
+
+        } catch (Exception e) {
+            log.error("Failed to detect and delete removed emails from folder: {}", folderName, e);
+            return 0;
+        }
     }
 
     /**

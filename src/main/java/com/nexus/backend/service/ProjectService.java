@@ -3,10 +3,11 @@ package com.nexus.backend.service;
 import com.nexus.backend.dto.request.ProjectRequest;
 import com.nexus.backend.dto.response.ProjectResponse;
 import com.nexus.backend.dto.response.ScheduleResponse;
-import com.nexus.backend.entity.Document;
+import com.nexus.backend.entity.File;
 import com.nexus.backend.entity.Project;
 import com.nexus.backend.entity.User;
-import com.nexus.backend.repository.DocumentRepository;
+import com.nexus.backend.repository.FileRepository;
+import com.nexus.backend.repository.GlossaryTermRepository;
 import com.nexus.backend.repository.ProjectRepository;
 import com.nexus.backend.repository.ScheduleRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,16 +26,22 @@ import java.util.stream.Collectors;
 public class ProjectService {
 
     private final ProjectRepository projectRepository;
-    private final DocumentRepository documentRepository;
+    private final FileRepository fileRepository;
     private final ScheduleRepository scheduleRepository;
-    private final com.nexus.backend.repository.GlossaryTermRepository glossaryTermRepository;
+    private final GlossaryTermRepository glossaryTermRepository;
 
     @Transactional(readOnly = true)
     public List<ProjectResponse> getUserProjects(User user) {
         return projectRepository.findByUserId(user.getId())
                 .stream()
                 .filter(project -> !"DELETED".equals(project.getStatus())) // Exclude deleted projects only
-                .map(ProjectResponse::from)
+                .map(project -> {
+                    ProjectResponse response = ProjectResponse.from(project);
+                    // Use project files approach to count terms (handles project_id = NULL case)
+                    long actualTermCount = glossaryTermRepository.countTermsByProjectFiles(project.getId());
+                    response.setTermCount((int) actualTermCount);
+                    return response;
+                })
                 .collect(Collectors.toList());
     }
 
@@ -43,7 +50,11 @@ public class ProjectService {
         Project project = projectRepository.findByIdAndUserId(projectId, user.getId())
                 .orElseThrow(() -> new RuntimeException("Project not found"));
 
-        return ProjectResponse.from(project);
+        ProjectResponse response = ProjectResponse.from(project);
+        // Use project files approach to count terms (handles project_id = NULL case)
+        long actualTermCount = glossaryTermRepository.countTermsByProjectFiles(project.getId());
+        response.setTermCount((int) actualTermCount);
+        return response;
     }
 
     @Transactional
@@ -54,33 +65,42 @@ public class ProjectService {
                 .name(request.getName())
                 .description(request.getDescription())
                 .status("ACTIVE")
-                .documents(new ArrayList<>())
+                .files(new ArrayList<>())
                 .build();
 
-        // Add documents if documentIds provided
-        if (request.getDocumentIds() != null && !request.getDocumentIds().isEmpty()) {
-            List<Document> documents = documentRepository.findAllById(request.getDocumentIds());
-            // Verify all documents belong to the user
-            documents.forEach(doc -> {
-                if (!doc.getUser().getId().equals(user.getId())) {
-                    throw new RuntimeException("Document does not belong to user");
-                }
-            });
-            project.getDocuments().addAll(documents);
-        }
-
+        // Save project first to get the ID
         project = projectRepository.save(project);
-        log.info("Created project: {} for user: {} with {} documents",
-                project.getId(), user.getId(), project.getDocuments().size());
 
-        // Update project_id for all terms associated with these documents
-        for (Document doc : project.getDocuments()) {
-            int updatedTerms = glossaryTermRepository.updateProjectIdForDocumentTerms(project.getId(), doc.getId());
-            log.info("Updated {} terms for document: {} with project_id: {}",
-                    updatedTerms, doc.getId(), project.getId());
+        // Add files if documentIds provided (keeping parameter name for backwards compatibility)
+        // IMPORTANT: File is the owner of the Many-to-Many relationship, so we must add the project to each file
+        if (request.getDocumentIds() != null && !request.getDocumentIds().isEmpty()) {
+            List<File> files = fileRepository.findAllById(request.getDocumentIds());
+            // Verify all files belong to the user
+            for (File file : files) {
+                if (!file.getUser().getId().equals(user.getId())) {
+                    throw new RuntimeException("File does not belong to user");
+                }
+                // Add project to file (File is the owner)
+                if (!file.getProjects().contains(project)) {
+                    file.getProjects().add(project);
+                }
+            }
+            // Save files to persist the relationship
+            fileRepository.saveAll(files);
         }
 
-        return ProjectResponse.from(project);
+        // Refresh project to get updated files list
+        project = projectRepository.findById(project.getId())
+                .orElseThrow(() -> new RuntimeException("Project not found after creation"));
+
+        log.info("Created project: {} for user: {} with {} files",
+                project.getId(), user.getId(), project.getFiles().size());
+
+        ProjectResponse response = ProjectResponse.from(project);
+        // Use project files approach to count terms (handles project_id = NULL case)
+        long actualTermCount = glossaryTermRepository.countTermsByProjectFiles(project.getId());
+        response.setTermCount((int) actualTermCount);
+        return response;
     }
 
     @Transactional
@@ -96,55 +116,67 @@ public class ProjectService {
             project.setStatus(request.getStatus());
         }
 
-        // Update documents if documentIds provided
+        projectRepository.save(project);
+
+        // Update files if documentIds provided (keeping parameter name for backwards compatibility)
+        // IMPORTANT: File is the owner of the Many-to-Many relationship
         if (request.getDocumentIds() != null) {
-            // Store old document IDs to detect changes
-            List<UUID> oldDocumentIds = project.getDocuments().stream()
-                    .map(Document::getId)
+            // Get current file IDs
+            List<UUID> oldFileIds = project.getFiles().stream()
+                    .map(File::getId)
                     .collect(Collectors.toList());
 
-            project.getDocuments().clear();
-
-            if (!request.getDocumentIds().isEmpty()) {
-                List<Document> documents = documentRepository.findAllById(request.getDocumentIds());
-                // Verify all documents belong to the user
-                documents.forEach(doc -> {
-                    if (!doc.getUser().getId().equals(user.getId())) {
-                        throw new RuntimeException("Document does not belong to user");
-                    }
-                });
-                project.getDocuments().addAll(documents);
-            }
-
-            // Find removed documents (old - new)
-            List<UUID> removedDocumentIds = oldDocumentIds.stream()
+            // Find removed files (old - new)
+            List<UUID> removedFileIds = oldFileIds.stream()
                     .filter(id -> !request.getDocumentIds().contains(id))
                     .collect(Collectors.toList());
 
-            // Find added documents (new - old)
-            List<UUID> addedDocumentIds = request.getDocumentIds().stream()
-                    .filter(id -> !oldDocumentIds.contains(id))
+            // Find added files (new - old)
+            List<UUID> addedFileIds = request.getDocumentIds().stream()
+                    .filter(id -> !oldFileIds.contains(id))
                     .collect(Collectors.toList());
 
-            // Clear project_id for terms of removed documents
-            for (UUID docId : removedDocumentIds) {
-                int clearedTerms = glossaryTermRepository.clearProjectIdForDocumentTerms(docId);
-                log.info("Cleared project_id for {} terms from removed document: {}", clearedTerms, docId);
+            log.info("Updating project files - Removed: {}, Added: {}",
+                    removedFileIds.size(), addedFileIds.size());
+
+            // Remove project from files that are being removed
+            if (!removedFileIds.isEmpty()) {
+                List<File> removedFiles = fileRepository.findAllById(removedFileIds);
+                for (File file : removedFiles) {
+                    file.getProjects().remove(project);
+                }
+                fileRepository.saveAll(removedFiles);
             }
 
-            // Set project_id for terms of added documents
-            for (UUID docId : addedDocumentIds) {
-                int updatedTerms = glossaryTermRepository.updateProjectIdForDocumentTerms(projectId, docId);
-                log.info("Updated {} terms for added document: {} with project_id: {}",
-                        updatedTerms, docId, projectId);
+            // Add project to files that are being added
+            if (!addedFileIds.isEmpty()) {
+                List<File> addedFiles = fileRepository.findAllById(addedFileIds);
+                for (File file : addedFiles) {
+                    // Verify file belongs to user
+                    if (!file.getUser().getId().equals(user.getId())) {
+                        throw new RuntimeException("File does not belong to user");
+                    }
+                    // Add project to file (File is the owner)
+                    if (!file.getProjects().contains(project)) {
+                        file.getProjects().add(project);
+                    }
+                }
+                fileRepository.saveAll(addedFiles);
             }
         }
 
-        project = projectRepository.save(project);
-        log.info("Updated project: {} with {} documents",
-                project.getId(), project.getDocuments().size());
+        // Refresh project to get updated files list
+        project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Project not found"));
 
-        return ProjectResponse.from(project);
+        log.info("Updated project: {} with {} files",
+                project.getId(), project.getFiles().size());
+
+        ProjectResponse response = ProjectResponse.from(project);
+        // Use project files approach to count terms (handles project_id = NULL case)
+        long actualTermCount = glossaryTermRepository.countTermsByProjectFiles(project.getId());
+        response.setTermCount((int) actualTermCount);
+        return response;
     }
 
     @Transactional

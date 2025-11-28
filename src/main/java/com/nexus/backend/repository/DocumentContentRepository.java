@@ -11,9 +11,9 @@ import java.util.UUID;
 @Repository
 public interface DocumentContentRepository extends JpaRepository<DocumentContent, UUID> {
 
-    List<DocumentContent> findByDocumentIdOrderByPageNumber(UUID documentId);
+    List<DocumentContent> findByFileIdOrderByPageNumber(UUID fileId);
 
-    Optional<DocumentContent> findByDocumentIdAndPageNumber(UUID documentId, Integer pageNumber);
+    Optional<DocumentContent> findByFileIdAndPageNumber(UUID fileId, Integer pageNumber);
 
-    void deleteByDocumentId(UUID documentId);
+    void deleteByFileId(UUID fileId);
 }

@@ -5,11 +5,11 @@ import com.nexus.backend.dto.request.PythonExtractionRequest;
 import com.nexus.backend.dto.response.ExtractionJobResponse;
 import com.nexus.backend.dto.response.GlossaryStatisticsResponse;
 import com.nexus.backend.dto.response.GlossaryTermResponse;
-import com.nexus.backend.entity.Document;
+import com.nexus.backend.entity.File;
 import com.nexus.backend.entity.GlossaryExtractionJob;
 import com.nexus.backend.entity.GlossaryTerm;
 import com.nexus.backend.entity.User;
-import com.nexus.backend.repository.DocumentRepository;
+import com.nexus.backend.repository.FileRepository;
 import com.nexus.backend.repository.GlossaryExtractionJobRepository;
 import com.nexus.backend.repository.GlossaryTermRepository;
 import lombok.RequiredArgsConstructor;
@@ -32,37 +32,37 @@ public class GlossaryService {
 
     private final GlossaryTermRepository glossaryTermRepository;
     private final GlossaryExtractionJobRepository extractionJobRepository;
-    private final DocumentRepository documentRepository;
+    private final FileRepository fileRepository;
     private final RestTemplate restTemplate;
 
     @Value("${python.backend.url:http://localhost:8000}")
     private String pythonBackendUrl;
 
     @Transactional
-    public ExtractionJobResponse startExtraction(UUID documentId, User user) {
-        log.info("Starting glossary extraction for document: {}", documentId);
+    public ExtractionJobResponse startExtraction(UUID fileId, User user) {
+        log.info("Starting glossary extraction for file: {}", fileId);
 
-        // Find document
-        Document document = documentRepository.findById(documentId)
-                .orElseThrow(() -> new RuntimeException("Document not found"));
+        // Find file
+        File file = fileRepository.findById(fileId)
+                .orElseThrow(() -> new RuntimeException("File not found"));
 
         // Check if there's an active job (PENDING or PROCESSING)
-        Optional<GlossaryExtractionJob> existingJob = extractionJobRepository.findByDocumentId(documentId);
+        Optional<GlossaryExtractionJob> existingJob = extractionJobRepository.findByFileId(fileId);
         if (existingJob.isPresent()) {
             String status = existingJob.get().getStatus();
             if ("PENDING".equals(status) || "PROCESSING".equals(status)) {
-                throw new RuntimeException("Extraction is already in progress for this document");
+                throw new RuntimeException("Extraction is already in progress for this file");
             }
             // Delete old FAILED or COMPLETED job to allow re-extraction
             extractionJobRepository.delete(existingJob.get());
             extractionJobRepository.flush(); // Force immediate deletion before creating new job
-            log.info("Deleted old extraction job (status: {}) for document: {}", status, documentId);
+            log.info("Deleted old extraction job (status: {}) for file: {}", status, fileId);
         }
 
         // Create extraction job
         GlossaryExtractionJob job = GlossaryExtractionJob.builder()
                 .user(user)
-                .document(document)
+                .file(file)
                 .status("PENDING")
                 .progress(0)
                 .termsExtracted(0)
@@ -77,16 +77,16 @@ public class GlossaryService {
             try {
                 String pythonUrl = pythonBackendUrl + "/api/ai/glossary/extract";
 
-                // Get first project if document has projects
+                // Get first project if file has projects
                 UUID projectId = null;
-                if (document.getProjects() != null && !document.getProjects().isEmpty()) {
-                    projectId = document.getProjects().get(0).getId();
+                if (file.getProjects() != null && !file.getProjects().isEmpty()) {
+                    projectId = file.getProjects().get(0).getId();
                 }
 
                 PythonExtractionRequest request = PythonExtractionRequest.builder()
                         .jobId(savedJob.getId())
-                        .documentId(documentId)
-                        .filePath(document.getFilePath())
+                        .fileId(fileId)
+                        .filePath(file.getFilePath())
                         .userId(user.getId())
                         .projectId(projectId)
                         .build();
@@ -129,15 +129,16 @@ public class GlossaryService {
     }
 
     // Project-level queries (filtered)
+    // Use project files approach instead of project_id to handle terms extracted before project assignment
     @Transactional(readOnly = true)
     public Page<GlossaryTermResponse> findTermsByProject(UUID projectId, Pageable pageable) {
-        return glossaryTermRepository.findByProjectId(projectId, pageable)
+        return glossaryTermRepository.findTermsByProjectFiles(projectId, pageable)
                 .map(GlossaryTermResponse::from);
     }
 
     @Transactional(readOnly = true)
     public Page<GlossaryTermResponse> searchTermsByProject(UUID projectId, String query, Pageable pageable) {
-        return glossaryTermRepository.searchByProjectIdAndQuery(projectId, query, pageable)
+        return glossaryTermRepository.searchTermsByProjectFiles(projectId, query, pageable)
                 .map(GlossaryTermResponse::from);
     }
 
@@ -265,13 +266,13 @@ public class GlossaryService {
         long userEditedTerms;
 
         if (projectId != null) {
-            // Project-level statistics
-            totalTerms = glossaryTermRepository.countByProjectId(projectId);
-            verifiedTerms = glossaryTermRepository.countByProjectIdAndIsVerified(projectId, true);
-            unverifiedTerms = glossaryTermRepository.countByProjectIdAndIsVerified(projectId, false);
-            autoExtractedTerms = glossaryTermRepository.countByProjectIdAndStatus(projectId, "AUTO_EXTRACTED");
-            userAddedTerms = glossaryTermRepository.countByProjectIdAndStatus(projectId, "USER_ADDED");
-            userEditedTerms = glossaryTermRepository.countByProjectIdAndStatus(projectId, "USER_EDITED");
+            // Project-level statistics (use project files approach)
+            totalTerms = glossaryTermRepository.countTermsByProjectFiles(projectId);
+            verifiedTerms = glossaryTermRepository.countTermsByProjectFilesAndIsVerified(projectId, true);
+            unverifiedTerms = glossaryTermRepository.countTermsByProjectFilesAndIsVerified(projectId, false);
+            autoExtractedTerms = glossaryTermRepository.countTermsByProjectFilesAndStatus(projectId, "AUTO_EXTRACTED");
+            userAddedTerms = glossaryTermRepository.countTermsByProjectFilesAndStatus(projectId, "USER_ADDED");
+            userEditedTerms = glossaryTermRepository.countTermsByProjectFilesAndStatus(projectId, "USER_EDITED");
         } else {
             // User-level statistics
             totalTerms = glossaryTermRepository.countByUserId(user.getId());

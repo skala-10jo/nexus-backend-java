@@ -10,27 +10,32 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
+/**
+ * Video-specific metadata extension entity.
+ * Has a 1:1 relationship with File entity where fileType = VIDEO.
+ *
+ * @author NEXUS Team
+ * @version 1.0
+ * @since 2025-01-18
+ */
 @Entity
-@Table(name = "video_documents")
+@Table(name = "video_files")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class VideoDocument {
+public class VideoFile {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "document_id", nullable = false, unique = true)
-    private Document document;
+    @MapsId
+    @JoinColumn(name = "id")
+    private File file;
 
-    // 영상 메타데이터
     @Column(name = "duration_seconds")
     private Integer durationSeconds;
 
@@ -50,7 +55,6 @@ public class VideoDocument {
     @Builder.Default
     private Boolean hasAudio = true;
 
-    // 처리 상태
     @Column(name = "stt_status", nullable = false, length = 20)
     @Builder.Default
     private String sttStatus = "pending";
@@ -59,33 +63,20 @@ public class VideoDocument {
     @Builder.Default
     private String translationStatus = "pending";
 
-    // 언어 설정
     @Column(name = "source_language", length = 10)
     private String sourceLanguage;
 
     @Column(name = "target_language", length = 10)
     private String targetLanguage;
 
-    // 결과 파일 경로
     @Column(name = "original_subtitle_path", length = 500)
     private String originalSubtitlePath;
 
     @Column(name = "translated_subtitle_path", length = 500)
     private String translatedSubtitlePath;
 
-    // 에러 정보
     @Column(name = "error_message", columnDefinition = "TEXT")
     private String errorMessage;
-
-    // 자막 세그먼트 (1:N 관계)
-    @OneToMany(mappedBy = "videoDocument", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<VideoSubtitle> subtitles = new ArrayList<>();
-
-    // 선택된 용어집 문서들 (M:N 관계)
-    @OneToMany(mappedBy = "videoDocument", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<VideoTranslationGlossary> glossaries = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -94,4 +85,8 @@ public class VideoDocument {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    // Note: VideoSubtitle는 기존 VideoDocument 구조와 연결되어 있으므로
+    // 새로운 File 구조와는 직접 연결하지 않습니다.
+    // 필요 시 VideoSubtitleRepository로 쿼리하여 조회할 수 있습니다.
 }

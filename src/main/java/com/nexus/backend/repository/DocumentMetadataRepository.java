@@ -10,7 +10,7 @@ import java.util.UUID;
 @Repository
 public interface DocumentMetadataRepository extends JpaRepository<DocumentMetadata, UUID> {
 
-    Optional<DocumentMetadata> findByDocumentId(UUID documentId);
+    Optional<DocumentMetadata> findByFileId(UUID fileId);
 
-    void deleteByDocumentId(UUID documentId);
+    void deleteByFileId(UUID fileId);
 }

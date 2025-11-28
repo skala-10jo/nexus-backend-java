@@ -14,8 +14,8 @@ import java.util.UUID;
 @Table(
     name = "glossary_extraction_jobs",
     uniqueConstraints = @UniqueConstraint(
-        name = "glossary_extraction_jobs_document_unique",
-        columnNames = {"document_id"}
+        name = "glossary_extraction_jobs_file_unique",
+        columnNames = {"file_id"}
     )
 )
 @Data
@@ -33,8 +33,8 @@ public class GlossaryExtractionJob {
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "document_id", nullable = false)
-    private Document document;
+    @JoinColumn(name = "file_id", nullable = false)
+    private File file;
 
     @Column(nullable = false, length = 20)
     private String status = "PENDING";  // PENDING, PROCESSING, COMPLETED, FAILED

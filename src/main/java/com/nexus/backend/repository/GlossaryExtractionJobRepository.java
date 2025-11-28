@@ -11,11 +11,19 @@ import java.util.UUID;
 @Repository
 public interface GlossaryExtractionJobRepository extends JpaRepository<GlossaryExtractionJob, UUID> {
 
-    Optional<GlossaryExtractionJob> findByDocumentId(UUID documentId);
+    Optional<GlossaryExtractionJob> findByFileId(UUID fileId);
 
     List<GlossaryExtractionJob> findByUserIdOrderByCreatedAtDesc(UUID userId);
 
     List<GlossaryExtractionJob> findByStatus(String status);
 
-    boolean existsByDocumentId(UUID documentId);
+    boolean existsByFileId(UUID fileId);
+
+    /**
+     * Delete all extraction jobs for a specific file.
+     * Used when deleting a file to clean up related jobs.
+     *
+     * @param fileId the file ID
+     */
+    void deleteByFileId(UUID fileId);
 }

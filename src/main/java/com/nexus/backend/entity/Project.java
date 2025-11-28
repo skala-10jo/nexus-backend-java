@@ -38,14 +38,9 @@ public class Project {
     @Column(nullable = false, length = 20)
     private String status = "ACTIVE";  // ACTIVE, ARCHIVED, DELETED
 
-    @ManyToMany
-    @JoinTable(
-        name = "project_documents",
-        joinColumns = @JoinColumn(name = "project_id"),
-        inverseJoinColumns = @JoinColumn(name = "document_id")
-    )
+    @ManyToMany(mappedBy = "projects")
     @Builder.Default
-    private List<Document> documents = new ArrayList<>();
+    private List<File> files = new ArrayList<>();
 
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

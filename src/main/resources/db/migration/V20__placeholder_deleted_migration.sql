@@ -1,0 +1,9 @@
+-- V20: Placeholder for deleted migration
+--
+-- This migration was created and later deleted during development.
+-- Keeping this placeholder to maintain migration version sequence for team collaboration.
+--
+-- Original purpose: Attempted to create video_subtitles (incorrect approach)
+-- Current status: Empty placeholder to prevent Flyway validation errors
+--
+-- DO NOTHING (intentionally empty)

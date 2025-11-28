@@ -18,7 +18,7 @@ import java.util.UUID;
 @Entity
 @Table(
     name = "video_subtitles",
-    uniqueConstraints = @UniqueConstraint(columnNames = {"video_document_id", "sequence_number"})
+    uniqueConstraints = @UniqueConstraint(columnNames = {"video_file_id", "sequence_number"})
 )
 @Data
 @Builder
@@ -31,8 +31,8 @@ public class VideoSubtitle {
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "video_document_id", nullable = false)
-    private VideoDocument videoDocument;
+    @JoinColumn(name = "video_file_id", nullable = false)
+    private VideoFile videoFile;
 
     // 시퀀스 및 타이밍
     @Column(name = "sequence_number", nullable = false)
