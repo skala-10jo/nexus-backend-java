@@ -1,12 +1,10 @@
--- V28: Remove legacy document_id column from glossary_extraction_jobs
+-- V28: Migrate glossary_extraction_jobs from document_id to file_id
 --
 -- Background:
 -- - V1 created glossary_extraction_jobs with document_id referencing documents table
 -- - V14-V24 migrated documents → files (unified file system)
 -- - V24 dropped documents table (FK was CASCADE deleted)
--- - Hibernate added file_id column with FK and unique constraint
--- - But document_id column still exists with NOT NULL constraint
--- - This causes "null value in document_id" error on INSERT
+-- - Need to add file_id column and remove legacy document_id column
 --
 -- Current DB state (verified):
 -- - file_id column: MAY or MAY NOT exist (depends on Hibernate state)
