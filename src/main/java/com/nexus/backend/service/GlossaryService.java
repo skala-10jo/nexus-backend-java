@@ -142,6 +142,19 @@ public class GlossaryService {
                 .map(GlossaryTermResponse::from);
     }
 
+    // Document-level queries (filtered by source file)
+    @Transactional(readOnly = true)
+    public Page<GlossaryTermResponse> findTermsByDocument(UUID documentId, Pageable pageable) {
+        return glossaryTermRepository.findBySourceFileId(documentId, pageable)
+                .map(GlossaryTermResponse::from);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<GlossaryTermResponse> searchTermsByDocument(UUID documentId, String query, Pageable pageable) {
+        return glossaryTermRepository.searchBySourceFileIdAndQuery(documentId, query, pageable)
+                .map(GlossaryTermResponse::from);
+    }
+
     @Transactional(readOnly = true)
     public GlossaryTermResponse getTermDetail(UUID termId, User user) {
         GlossaryTerm term = glossaryTermRepository.findByIdAndUserId(termId, user.getId())

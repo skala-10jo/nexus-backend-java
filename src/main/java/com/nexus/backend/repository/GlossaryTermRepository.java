@@ -112,4 +112,27 @@ public interface GlossaryTermRepository extends JpaRepository<GlossaryTerm, UUID
         @Param("projectId") UUID projectId,
         @Param("status") String status
     );
+
+    // Document-level queries (filtered by source file)
+    @Query(value = "SELECT DISTINCT t.* FROM glossary_terms t " +
+                   "INNER JOIN glossary_term_documents gtd ON t.id = gtd.term_id " +
+                   "WHERE gtd.file_id = :fileId",
+           nativeQuery = true)
+    Page<GlossaryTerm> findBySourceFileId(
+        @Param("fileId") UUID fileId,
+        Pageable pageable
+    );
+
+    @Query(value = "SELECT DISTINCT t.* FROM glossary_terms t " +
+                   "INNER JOIN glossary_term_documents gtd ON t.id = gtd.term_id " +
+                   "WHERE gtd.file_id = :fileId " +
+                   "AND (LOWER(t.korean_term) LIKE LOWER(CONCAT('%', :query, '%')) " +
+                   "OR LOWER(t.english_term) LIKE LOWER(CONCAT('%', :query, '%')) " +
+                   "OR LOWER(t.definition) LIKE LOWER(CONCAT('%', :query, '%')))",
+           nativeQuery = true)
+    Page<GlossaryTerm> searchBySourceFileIdAndQuery(
+        @Param("fileId") UUID fileId,
+        @Param("query") String query,
+        Pageable pageable
+    );
 }

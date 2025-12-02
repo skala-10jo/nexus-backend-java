@@ -48,15 +48,20 @@ public class GlossaryController {
     }
 
     /**
-     * Get all glossary terms for current user (with optional project filter)
+     * Get all glossary terms for current user (with optional project or document filter)
      */
     @GetMapping
     public ResponseEntity<Page<GlossaryTermResponse>> getTerms(
             @RequestParam(required = false) UUID projectId,
+            @RequestParam(required = false) UUID documentId,
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable,
             @AuthenticationPrincipal User user) {
 
-        if (projectId != null) {
+        if (documentId != null) {
+            log.info("Getting glossary terms for document: {}", documentId);
+            Page<GlossaryTermResponse> terms = glossaryService.findTermsByDocument(documentId, pageable);
+            return ResponseEntity.ok(terms);
+        } else if (projectId != null) {
             log.info("Getting glossary terms for project: {}", projectId);
             Page<GlossaryTermResponse> terms = glossaryService.findTermsByProject(projectId, pageable);
             return ResponseEntity.ok(terms);
@@ -68,16 +73,21 @@ public class GlossaryController {
     }
 
     /**
-     * Search glossary terms (with optional project filter)
+     * Search glossary terms (with optional project or document filter)
      */
     @GetMapping("/search")
     public ResponseEntity<Page<GlossaryTermResponse>> searchTerms(
             @RequestParam String query,
             @RequestParam(required = false) UUID projectId,
+            @RequestParam(required = false) UUID documentId,
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable,
             @AuthenticationPrincipal User user) {
 
-        if (projectId != null) {
+        if (documentId != null) {
+            log.info("Searching glossary terms in document: {} with query: {}", documentId, query);
+            Page<GlossaryTermResponse> terms = glossaryService.searchTermsByDocument(documentId, query, pageable);
+            return ResponseEntity.ok(terms);
+        } else if (projectId != null) {
             log.info("Searching glossary terms in project: {} with query: {}", projectId, query);
             Page<GlossaryTermResponse> terms = glossaryService.searchTermsByProject(projectId, query, pageable);
             return ResponseEntity.ok(terms);
