@@ -3,6 +3,8 @@ package com.nexus.backend.controller;
 import com.nexus.backend.dto.expression.ChapterResponse;
 import com.nexus.backend.dto.expression.ExpressionResponse;
 import com.nexus.backend.dto.expression.MarkLearnedRequest;
+import com.nexus.backend.dto.expression.MistakeResponse;
+import com.nexus.backend.dto.expression.QuizResultRequest;
 import com.nexus.backend.dto.expression.UnitResponse;
 import com.nexus.backend.dto.response.ApiResponse;
 import com.nexus.backend.entity.User;
@@ -99,5 +101,74 @@ public class ExpressionController {
 
         log.info("표현 학습 완료 처리 완료");
         return ResponseEntity.ok(ApiResponse.success("표현 학습 완료 처리가 완료되었습니다", null));
+    }
+
+    /**
+     * 퀴즈 결과 저장
+     */
+    @PostMapping("/quiz/result")
+    public ResponseEntity<ApiResponse<Void>> saveQuizResult(
+            @RequestBody @Valid QuizResultRequest request,
+            @AuthenticationPrincipal User user) {
+        log.info("퀴즈 결과 저장 요청: userId={}, expressionId={}", user.getId(), request.getExpressionId());
+
+        expressionService.saveQuizResult(request, user.getId());
+
+        return ResponseEntity.ok(ApiResponse.success("퀴즈 결과가 저장되었습니다", null));
+    }
+
+    /**
+     * 오답 목록 조회
+     */
+    @GetMapping("/mistakes")
+    public ResponseEntity<ApiResponse<List<MistakeResponse>>> getMistakes(
+            @AuthenticationPrincipal User user) {
+        log.info("오답 목록 조회 요청: userId={}", user.getId());
+
+        List<MistakeResponse> mistakes = expressionService.getMistakes(user.getId());
+
+        log.info("오답 목록 조회 완료: count={}", mistakes.size());
+        return ResponseEntity.ok(ApiResponse.success(mistakes));
+    }
+
+    /**
+     * 오답 개수 조회
+     */
+    @GetMapping("/mistakes/count")
+    public ResponseEntity<ApiResponse<Long>> getMistakeCount(
+            @AuthenticationPrincipal User user) {
+        log.info("오답 개수 조회 요청: userId={}", user.getId());
+
+        Long count = expressionService.getMistakeCount(user.getId());
+
+        return ResponseEntity.ok(ApiResponse.success(count));
+    }
+
+    /**
+     * 모든 퀴즈 결과 삭제 (Clear All)
+     */
+    @DeleteMapping("/quiz/results")
+    public ResponseEntity<ApiResponse<Void>> clearAllQuizResults(
+            @AuthenticationPrincipal User user) {
+        log.info("퀴즈 결과 전체 삭제 요청: userId={}", user.getId());
+
+        expressionService.clearAllQuizResults(user.getId());
+
+        return ResponseEntity.ok(ApiResponse.success("모든 퀴즈 결과가 삭제되었습니다", null));
+    }
+
+    /**
+     * 개별 퀴즈 결과 삭제
+     */
+    @DeleteMapping("/quiz/result/{expressionId}/{exampleIndex}")
+    public ResponseEntity<ApiResponse<Void>> deleteQuizResult(
+            @PathVariable java.util.UUID expressionId,
+            @PathVariable Integer exampleIndex,
+            @AuthenticationPrincipal User user) {
+        log.info("퀴즈 결과 삭제 요청: userId={}, expressionId={}, exampleIndex={}", user.getId(), expressionId, exampleIndex);
+
+        expressionService.deleteQuizResult(user.getId(), expressionId, exampleIndex);
+
+        return ResponseEntity.ok(ApiResponse.success("퀴즈 결과가 삭제되었습니다", null));
     }
 }
