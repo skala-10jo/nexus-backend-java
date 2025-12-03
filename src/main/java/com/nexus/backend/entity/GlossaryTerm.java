@@ -47,6 +47,12 @@ public class GlossaryTerm {
     @Column(name = "vietnamese_term", length = 255)
     private String vietnameseTerm;
 
+    @Column(name = "japanese_term", length = 255)
+    private String japaneseTerm;
+
+    @Column(name = "chinese_term", length = 255)
+    private String chineseTerm;
+
     @Column(length = 100)
     private String abbreviation;
 

@@ -21,6 +21,8 @@ public class GlossaryTermResponse {
     private String koreanTerm;
     private String englishTerm;
     private String vietnameseTerm;
+    private String japaneseTerm;
+    private String chineseTerm;
     private String abbreviation;
     private String definition;
     private String context;
@@ -41,6 +43,8 @@ public class GlossaryTermResponse {
                 .koreanTerm(term.getKoreanTerm())
                 .englishTerm(term.getEnglishTerm())
                 .vietnameseTerm(term.getVietnameseTerm())
+                .japaneseTerm(term.getJapaneseTerm())
+                .chineseTerm(term.getChineseTerm())
                 .abbreviation(term.getAbbreviation())
                 .definition(term.getDefinition())
                 .context(term.getContext())

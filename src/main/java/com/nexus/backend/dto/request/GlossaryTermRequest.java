@@ -13,6 +13,10 @@ public class GlossaryTermRequest {
 
     private String vietnameseTerm;
 
+    private String japaneseTerm;
+
+    private String chineseTerm;
+
     private String abbreviation;
 
     @NotBlank(message = "Definition is required")
