@@ -38,6 +38,9 @@ public class User {
     @Column(name = "avatar_url")
     private String avatarUrl;
 
+    @Column(name = "role", length = 100)
+    private String role;
+
     // Outlook integration fields
     @Column(name = "outlook_email")
     private String outlookEmail;
