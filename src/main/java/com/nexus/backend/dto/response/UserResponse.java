@@ -20,6 +20,7 @@ public class UserResponse {
     private String email;
     private String fullName;
     private String avatarUrl;
+    private String role;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -30,6 +31,7 @@ public class UserResponse {
                 .email(user.getEmail())
                 .fullName(user.getFullName())
                 .avatarUrl(user.getAvatarUrl())
+                .role(user.getRole())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();

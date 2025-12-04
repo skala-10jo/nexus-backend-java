@@ -10,4 +10,7 @@ public class UpdateUserRequest {
     private String fullName;
 
     private String avatarUrl;
+
+    @Size(max = 100, message = "Role must be less than 100 characters")
+    private String role;
 }

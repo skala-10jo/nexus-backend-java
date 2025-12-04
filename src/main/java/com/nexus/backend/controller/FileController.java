@@ -6,18 +6,24 @@ import com.nexus.backend.dto.response.FileDetailResponse;
 import com.nexus.backend.dto.response.FileResponse;
 import com.nexus.backend.entity.User;
 import com.nexus.backend.service.FileService;
+import com.nexus.backend.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.UUID;
 
 /**
@@ -35,6 +41,7 @@ import java.util.UUID;
 public class FileController {
 
     private final FileService fileService;
+    private final FileStorageService fileStorageService;
 
     /**
      * Upload a document file.
@@ -181,5 +188,49 @@ public class FileController {
         fileService.deleteFile(id, user.getId());
 
         return ResponseEntity.ok(ApiResponse.success("파일 삭제 완료", null));
+    }
+
+    /**
+     * Serve a file by path (public endpoint for avatars and other static files).
+     * GET /api/files/serve/{*path}
+     *
+     * @param path the file path
+     * @return the file resource
+     */
+    @GetMapping("/serve/**")
+    public ResponseEntity<Resource> serveFile(
+            @RequestParam(value = "path", required = false) String pathParam,
+            jakarta.servlet.http.HttpServletRequest request
+    ) {
+        // Extract path from URL (everything after /serve/)
+        String fullPath = request.getRequestURI();
+        String basePath = "/api/files/serve/";
+        String filePath = fullPath.substring(fullPath.indexOf(basePath) + basePath.length());
+
+        log.debug("Serving file: {}", filePath);
+
+        try {
+            Resource resource = fileStorageService.loadFileAsResource(filePath);
+
+            // Determine content type
+            String contentType;
+            try {
+                contentType = Files.probeContentType(fileStorageService.getFilePath(filePath));
+            } catch (IOException e) {
+                contentType = "application/octet-stream";
+            }
+
+            if (contentType == null) {
+                contentType = "application/octet-stream";
+            }
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .header(HttpHeaders.CACHE_CONTROL, "max-age=31536000") // Cache for 1 year
+                    .body(resource);
+        } catch (Exception e) {
+            log.error("File not found: {}", filePath);
+            return ResponseEntity.notFound().build();
+        }
     }
 }

@@ -7,9 +7,11 @@ import com.nexus.backend.entity.User;
 import com.nexus.backend.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 import java.util.UUID;
@@ -17,6 +19,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
+@Slf4j
 public class UserController {
 
     private final UserService userService;
@@ -45,6 +48,32 @@ public class UserController {
         return ResponseEntity.ok(
                 ApiResponse.success(
                         "Profile updated successfully",
+                        Map.of("user", userResponse)
+                ));
+    }
+
+    /**
+     * Upload user avatar image.
+     * POST /api/users/{id}/avatar
+     *
+     * @param id          user ID
+     * @param file        avatar image file (PNG, JPG, JPEG, GIF, WEBP)
+     * @param currentUser authenticated user
+     * @return updated user with new avatar URL
+     */
+    @PostMapping("/{id}/avatar")
+    public ResponseEntity<ApiResponse<Map<String, UserResponse>>> uploadAvatar(
+            @PathVariable UUID id,
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal User currentUser) {
+
+        log.info("Avatar upload request: userId={}, filename={}", id, file.getOriginalFilename());
+
+        UserResponse userResponse = userService.uploadAvatar(id, file, currentUser);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Avatar uploaded successfully",
                         Map.of("user", userResponse)
                 ));
     }
