@@ -24,6 +24,9 @@ import org.springframework.web.client.RestTemplate;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 @Service
 @RequiredArgsConstructor
@@ -130,29 +133,64 @@ public class GlossaryService {
 
     // Project-level queries (filtered)
     // Use project files approach instead of project_id to handle terms extracted before project assignment
+    // Note: These use native queries which require snake_case column names for sorting
     @Transactional(readOnly = true)
     public Page<GlossaryTermResponse> findTermsByProject(UUID projectId, Pageable pageable) {
-        return glossaryTermRepository.findTermsByProjectFiles(projectId, pageable)
+        Pageable nativePageable = convertToNativePageable(pageable);
+        return glossaryTermRepository.findTermsByProjectFiles(projectId, nativePageable)
                 .map(GlossaryTermResponse::from);
     }
 
     @Transactional(readOnly = true)
     public Page<GlossaryTermResponse> searchTermsByProject(UUID projectId, String query, Pageable pageable) {
-        return glossaryTermRepository.searchTermsByProjectFiles(projectId, query, pageable)
+        Pageable nativePageable = convertToNativePageable(pageable);
+        return glossaryTermRepository.searchTermsByProjectFiles(projectId, query, nativePageable)
                 .map(GlossaryTermResponse::from);
     }
 
     // Document-level queries (filtered by source file)
+    // Note: These use native queries which require snake_case column names for sorting
     @Transactional(readOnly = true)
     public Page<GlossaryTermResponse> findTermsByDocument(UUID documentId, Pageable pageable) {
-        return glossaryTermRepository.findBySourceFileId(documentId, pageable)
+        Pageable nativePageable = convertToNativePageable(pageable);
+        return glossaryTermRepository.findBySourceFileId(documentId, nativePageable)
                 .map(GlossaryTermResponse::from);
     }
 
     @Transactional(readOnly = true)
     public Page<GlossaryTermResponse> searchTermsByDocument(UUID documentId, String query, Pageable pageable) {
-        return glossaryTermRepository.searchBySourceFileIdAndQuery(documentId, query, pageable)
+        Pageable nativePageable = convertToNativePageable(pageable);
+        return glossaryTermRepository.searchBySourceFileIdAndQuery(documentId, query, nativePageable)
                 .map(GlossaryTermResponse::from);
+    }
+
+    /**
+     * Convert Pageable with camelCase property names to snake_case column names for native queries.
+     * e.g., "createdAt" -> "created_at"
+     */
+    private Pageable convertToNativePageable(Pageable pageable) {
+        if (pageable.getSort().isUnsorted()) {
+            return pageable;
+        }
+
+        Sort nativeSort = Sort.by(
+            pageable.getSort().stream()
+                .map(order -> {
+                    String snakeCaseProperty = camelToSnake(order.getProperty());
+                    return new Sort.Order(order.getDirection(), snakeCaseProperty);
+                })
+                .collect(Collectors.toList())
+        );
+
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), nativeSort);
+    }
+
+    /**
+     * Convert camelCase to snake_case.
+     * e.g., "createdAt" -> "created_at"
+     */
+    private String camelToSnake(String camelCase) {
+        return camelCase.replaceAll("([a-z])([A-Z])", "$1_$2").toLowerCase();
     }
 
     @Transactional(readOnly = true)

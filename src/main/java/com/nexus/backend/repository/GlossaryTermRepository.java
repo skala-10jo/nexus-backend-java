@@ -66,6 +66,10 @@ public interface GlossaryTermRepository extends JpaRepository<GlossaryTerm, UUID
                    "INNER JOIN glossary_term_documents gtd ON t.id = gtd.term_id " +
                    "INNER JOIN project_files pf ON gtd.file_id = pf.file_id " +
                    "WHERE pf.project_id = :projectId",
+           countQuery = "SELECT COUNT(DISTINCT t.id) FROM glossary_terms t " +
+                        "INNER JOIN glossary_term_documents gtd ON t.id = gtd.term_id " +
+                        "INNER JOIN project_files pf ON gtd.file_id = pf.file_id " +
+                        "WHERE pf.project_id = :projectId",
            nativeQuery = true)
     Page<GlossaryTerm> findTermsByProjectFiles(
         @Param("projectId") UUID projectId,
@@ -79,6 +83,13 @@ public interface GlossaryTermRepository extends JpaRepository<GlossaryTerm, UUID
                    "AND (LOWER(t.korean_term) LIKE LOWER(CONCAT('%', :query, '%')) " +
                    "OR LOWER(t.english_term) LIKE LOWER(CONCAT('%', :query, '%')) " +
                    "OR LOWER(t.definition) LIKE LOWER(CONCAT('%', :query, '%')))",
+           countQuery = "SELECT COUNT(DISTINCT t.id) FROM glossary_terms t " +
+                        "INNER JOIN glossary_term_documents gtd ON t.id = gtd.term_id " +
+                        "INNER JOIN project_files pf ON gtd.file_id = pf.file_id " +
+                        "WHERE pf.project_id = :projectId " +
+                        "AND (LOWER(t.korean_term) LIKE LOWER(CONCAT('%', :query, '%')) " +
+                        "OR LOWER(t.english_term) LIKE LOWER(CONCAT('%', :query, '%')) " +
+                        "OR LOWER(t.definition) LIKE LOWER(CONCAT('%', :query, '%')))",
            nativeQuery = true)
     Page<GlossaryTerm> searchTermsByProjectFiles(
         @Param("projectId") UUID projectId,
@@ -117,6 +128,9 @@ public interface GlossaryTermRepository extends JpaRepository<GlossaryTerm, UUID
     @Query(value = "SELECT DISTINCT t.* FROM glossary_terms t " +
                    "INNER JOIN glossary_term_documents gtd ON t.id = gtd.term_id " +
                    "WHERE gtd.file_id = :fileId",
+           countQuery = "SELECT COUNT(DISTINCT t.id) FROM glossary_terms t " +
+                        "INNER JOIN glossary_term_documents gtd ON t.id = gtd.term_id " +
+                        "WHERE gtd.file_id = :fileId",
            nativeQuery = true)
     Page<GlossaryTerm> findBySourceFileId(
         @Param("fileId") UUID fileId,
@@ -129,6 +143,12 @@ public interface GlossaryTermRepository extends JpaRepository<GlossaryTerm, UUID
                    "AND (LOWER(t.korean_term) LIKE LOWER(CONCAT('%', :query, '%')) " +
                    "OR LOWER(t.english_term) LIKE LOWER(CONCAT('%', :query, '%')) " +
                    "OR LOWER(t.definition) LIKE LOWER(CONCAT('%', :query, '%')))",
+           countQuery = "SELECT COUNT(DISTINCT t.id) FROM glossary_terms t " +
+                        "INNER JOIN glossary_term_documents gtd ON t.id = gtd.term_id " +
+                        "WHERE gtd.file_id = :fileId " +
+                        "AND (LOWER(t.korean_term) LIKE LOWER(CONCAT('%', :query, '%')) " +
+                        "OR LOWER(t.english_term) LIKE LOWER(CONCAT('%', :query, '%')) " +
+                        "OR LOWER(t.definition) LIKE LOWER(CONCAT('%', :query, '%')))",
            nativeQuery = true)
     Page<GlossaryTerm> searchBySourceFileIdAndQuery(
         @Param("fileId") UUID fileId,

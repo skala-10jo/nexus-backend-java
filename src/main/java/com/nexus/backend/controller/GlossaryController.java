@@ -58,15 +58,12 @@ public class GlossaryController {
             @AuthenticationPrincipal User user) {
 
         if (documentId != null) {
-            log.info("Getting glossary terms for document: {}", documentId);
             Page<GlossaryTermResponse> terms = glossaryService.findTermsByDocument(documentId, pageable);
             return ResponseEntity.ok(terms);
         } else if (projectId != null) {
-            log.info("Getting glossary terms for project: {}", projectId);
             Page<GlossaryTermResponse> terms = glossaryService.findTermsByProject(projectId, pageable);
             return ResponseEntity.ok(terms);
         } else {
-            log.info("Getting all glossary terms for user: {}", user.getId());
             Page<GlossaryTermResponse> terms = glossaryService.findAllTermsByUser(user, pageable);
             return ResponseEntity.ok(terms);
         }
