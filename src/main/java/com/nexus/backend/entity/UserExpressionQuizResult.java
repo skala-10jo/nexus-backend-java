@@ -50,12 +50,24 @@ public class UserExpressionQuizResult {
     @Column(name = "last_attempted_at")
     private ZonedDateTime lastAttemptedAt;
 
+    @Column(name = "daily_correct_delta", nullable = false)
+    @Builder.Default
+    private Integer dailyCorrectDelta = 0;
+
+    @Column(name = "daily_incorrect_delta", nullable = false)
+    @Builder.Default
+    private Integer dailyIncorrectDelta = 0;
+
+    @Column(name = "delta_date")
+    private java.time.LocalDate deltaDate;
+
     /**
      * 정답 처리
      */
     public void recordCorrect() {
         this.correctCount++;
         this.lastAttemptedAt = ZonedDateTime.now();
+        updateDailyDelta(true);
     }
 
     /**
@@ -64,6 +76,28 @@ public class UserExpressionQuizResult {
     public void recordIncorrect() {
         this.incorrectCount++;
         this.lastAttemptedAt = ZonedDateTime.now();
+        updateDailyDelta(false);
+    }
+
+    /**
+     * 일별 증분 업데이트
+     */
+    private void updateDailyDelta(boolean isCorrect) {
+        java.time.LocalDate today = java.time.LocalDate.now();
+
+        // 날짜가 바뀌면 증분 리셋
+        if (this.deltaDate == null || !this.deltaDate.equals(today)) {
+            this.dailyCorrectDelta = 0;
+            this.dailyIncorrectDelta = 0;
+            this.deltaDate = today;
+        }
+
+        // 증분 추가
+        if (isCorrect) {
+            this.dailyCorrectDelta++;
+        } else {
+            this.dailyIncorrectDelta++;
+        }
     }
 
     /**

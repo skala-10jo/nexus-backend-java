@@ -1,6 +1,7 @@
 package com.nexus.backend.service;
 
 import com.nexus.backend.dto.expression.ChapterResponse;
+import com.nexus.backend.dto.expression.DailyQuizStatsResponse;
 import com.nexus.backend.dto.expression.ExpressionResponse;
 import com.nexus.backend.dto.expression.MarkLearnedRequest;
 import com.nexus.backend.dto.expression.MistakeResponse;
@@ -19,6 +20,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Date;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -306,5 +309,26 @@ public class ExpressionService {
         log.info("퀴즈 결과 삭제 시작: userId={}, expressionId={}, exampleIndex={}", userId, expressionId, exampleIndex);
         quizResultRepository.deleteByUserIdAndExpressionIdAndExampleIndex(userId, expressionId, exampleIndex);
         log.info("퀴즈 결과 삭제 완료");
+    }
+
+    /**
+     * 일별 퀴즈 통계 조회 (최근 N일)
+     */
+    @Transactional(readOnly = true)
+    public List<DailyQuizStatsResponse> getDailyQuizStats(UUID userId, int days) {
+        log.info("일별 퀴즈 통계 조회 시작: userId={}, days={}", userId, days);
+
+        List<Object[]> stats = quizResultRepository.getDailyQuizStats(userId, days);
+
+        List<DailyQuizStatsResponse> responses = stats.stream()
+                .map(row -> DailyQuizStatsResponse.of(
+                        ((Date) row[0]).toLocalDate(),
+                        ((Number) row[1]).longValue(),
+                        ((Number) row[2]).longValue()
+                ))
+                .collect(Collectors.toList());
+
+        log.info("일별 퀴즈 통계 조회 완료: count={}", responses.size());
+        return responses;
     }
 }

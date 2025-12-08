@@ -86,4 +86,20 @@ public interface UserExpressionQuizResultRepository extends JpaRepository<UserEx
            "WHERE r.user.id = :userId AND e.unit = :unit " +
            "GROUP BY e.chapter")
     List<Object[]> getQuizStatsByChapter(@Param("userId") UUID userId, @Param("unit") String unit);
+
+    /**
+     * 사용자의 일별 퀴즈 통계 조회 (최근 N일)
+     * delta_date 기준으로 일별 증분 합계 반환
+     */
+    @Query(value = "SELECT delta_date as quiz_date, " +
+           "SUM(daily_correct_delta) as correct_count, " +
+           "SUM(daily_incorrect_delta) as incorrect_count " +
+           "FROM user_expression_quiz_results " +
+           "WHERE user_id = :userId " +
+           "AND delta_date >= CURRENT_DATE - CAST(:days AS INTEGER) + 1 " +
+           "AND delta_date IS NOT NULL " +
+           "GROUP BY delta_date " +
+           "ORDER BY quiz_date ASC",
+           nativeQuery = true)
+    List<Object[]> getDailyQuizStats(@Param("userId") UUID userId, @Param("days") int days);
 }

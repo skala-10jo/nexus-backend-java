@@ -1,6 +1,7 @@
 package com.nexus.backend.controller;
 
 import com.nexus.backend.dto.expression.ChapterResponse;
+import com.nexus.backend.dto.expression.DailyQuizStatsResponse;
 import com.nexus.backend.dto.expression.ExpressionResponse;
 import com.nexus.backend.dto.expression.MarkLearnedRequest;
 import com.nexus.backend.dto.expression.MistakeResponse;
@@ -170,5 +171,22 @@ public class ExpressionController {
         expressionService.deleteQuizResult(user.getId(), expressionId, exampleIndex);
 
         return ResponseEntity.ok(ApiResponse.success("퀴즈 결과가 삭제되었습니다", null));
+    }
+
+    /**
+     * 일별 퀴즈 통계 조회 (Performance 차트용)
+     *
+     * @param days 조회할 일 수 (기본값: 7)
+     */
+    @GetMapping("/quiz/daily-stats")
+    public ResponseEntity<ApiResponse<List<DailyQuizStatsResponse>>> getDailyQuizStats(
+            @RequestParam(defaultValue = "7") int days,
+            @AuthenticationPrincipal User user) {
+        log.info("일별 퀴즈 통계 조회 요청: userId={}, days={}", user.getId(), days);
+
+        List<DailyQuizStatsResponse> stats = expressionService.getDailyQuizStats(user.getId(), days);
+
+        log.info("일별 퀴즈 통계 조회 완료: count={}", stats.size());
+        return ResponseEntity.ok(ApiResponse.success(stats));
     }
 }
