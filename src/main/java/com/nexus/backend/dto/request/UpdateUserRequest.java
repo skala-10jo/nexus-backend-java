@@ -1,5 +1,6 @@
 package com.nexus.backend.dto.request;
 
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -13,4 +14,7 @@ public class UpdateUserRequest {
 
     @Size(max = 100, message = "Role must be less than 100 characters")
     private String role;
+
+    @Pattern(regexp = "^(ko|en|ja|vi|zh)$", message = "Invalid language code. Allowed: ko, en, ja, vi, zh")
+    private String preferredLanguage;
 }

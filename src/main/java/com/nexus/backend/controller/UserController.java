@@ -77,4 +77,31 @@ public class UserController {
                         Map.of("user", userResponse)
                 ));
     }
+
+    /**
+     * Update user's preferred language for Slack translation.
+     * PATCH /api/users/{id}/preferred-language
+     *
+     * @param id          user ID
+     * @param request     Map containing "language" key (ko, en, ja, vi, zh)
+     * @param currentUser authenticated user
+     * @return updated user response
+     */
+    @PatchMapping("/{id}/preferred-language")
+    public ResponseEntity<ApiResponse<Map<String, UserResponse>>> updatePreferredLanguage(
+            @PathVariable UUID id,
+            @RequestBody Map<String, String> request,
+            @AuthenticationPrincipal User currentUser) {
+
+        String language = request.get("language");
+        log.info("Preferred language update request: userId={}, language={}", id, language);
+
+        UserResponse userResponse = userService.updatePreferredLanguage(id, language, currentUser);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        "Preferred language updated successfully",
+                        Map.of("user", userResponse)
+                ));
+    }
 }

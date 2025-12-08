@@ -57,6 +57,10 @@ public class UserService {
             user.setRole(request.getRole());
         }
 
+        if (request.getPreferredLanguage() != null) {
+            user.setPreferredLanguage(request.getPreferredLanguage().toLowerCase());
+        }
+
         user = userRepository.save(user);
 
         return UserResponse.from(user);
@@ -111,6 +115,36 @@ public class UserService {
 
         // Update user avatar URL
         user.setAvatarUrl(storedPath);
+        user = userRepository.save(user);
+
+        return UserResponse.from(user);
+    }
+
+    /**
+     * Update user's preferred language for Slack translation.
+     *
+     * @param id          user ID
+     * @param language    preferred language code (ko, en, ja, vi, zh)
+     * @param currentUser authenticated user
+     * @return updated user response
+     */
+    @Transactional
+    public UserResponse updatePreferredLanguage(UUID id, String language, User currentUser) {
+        // Check if user can only update their own preference
+        if (!currentUser.getId().equals(id)) {
+            throw new RuntimeException("You can only update your own preferences");
+        }
+
+        // Validate language code
+        List<String> validLanguages = Arrays.asList("ko", "en", "ja", "vi", "zh");
+        if (language == null || !validLanguages.contains(language.toLowerCase())) {
+            throw new RuntimeException("Invalid language code. Allowed: ko, en, ja, vi, zh");
+        }
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.setPreferredLanguage(language.toLowerCase());
         user = userRepository.save(user);
 
         return UserResponse.from(user);

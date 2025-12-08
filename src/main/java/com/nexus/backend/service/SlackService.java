@@ -25,7 +25,10 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -196,6 +199,9 @@ public class SlackService {
                 try {
                     String userToken = user.getSlackUserAccessToken();
 
+                    // OPTIMIZATION: Batch fetch all user display names (1 API call instead of N)
+                    Map<String, String> userDisplayNames = fetchAllUserDisplayNames(userToken);
+
                     // Try fetching DMs with types=im,mpim using ConversationType enum
                     ConversationsListRequest dmRequest = ConversationsListRequest.builder()
                             .token(userToken)
@@ -209,16 +215,12 @@ public class SlackService {
                     if (dmResponse.isOk()) {
                         log.info("DM conversations.list returned {} items", dmResponse.getChannels().size());
 
-                        dmResponse.getChannels().forEach(conv -> {
-                            log.info("DM Conversation: id={}, name={}, isIm={}, isMpim={}, user={}",
-                                    conv.getId(), conv.getName(), conv.isIm(), conv.isMpim(), conv.getUser());
-                        });
-
-                        // Add all DMs to the list
+                        // Add all DMs to the list using batch-fetched user names
                         dmResponse.getChannels().forEach(dm -> {
                             String displayName;
                             if (dm.isIm() && dm.getUser() != null) {
-                                displayName = getUserDisplayName(userToken, dm.getUser());
+                                // Use batch-fetched map instead of individual API calls
+                                displayName = getUserDisplayNameFromMap(userDisplayNames, dm.getUser(), "Direct Message");
                             } else if (dm.isMpim()) {
                                 displayName = "Group DM";
                             } else {
@@ -256,7 +258,39 @@ public class SlackService {
     }
 
     /**
-     * Get user display name for DMs
+     * Batch fetch all workspace users' display names (OPTIMIZED)
+     * Reduces N API calls to 1 API call
+     */
+    private Map<String, String> fetchAllUserDisplayNames(String token) {
+        Map<String, String> userNames = new HashMap<>();
+        try {
+            var response = slack.methods(token).usersList(req -> req.limit(1000));
+            if (response.isOk() && response.getMembers() != null) {
+                response.getMembers().forEach(user -> {
+                    String displayName = user.getProfile() != null ? user.getProfile().getDisplayName() : null;
+                    String realName = user.getRealName();
+                    String name = (displayName != null && !displayName.isEmpty()) ? displayName : realName;
+                    if (name != null) {
+                        userNames.put(user.getId(), name);
+                    }
+                });
+                log.info("Batch fetched {} user display names", userNames.size());
+            }
+        } catch (Exception e) {
+            log.warn("Failed to batch fetch users: {}", e.getMessage());
+        }
+        return userNames;
+    }
+
+    /**
+     * Get user display name from cache map, or return default
+     */
+    private String getUserDisplayNameFromMap(Map<String, String> userMap, String userId, String defaultName) {
+        return userMap.getOrDefault(userId, defaultName);
+    }
+
+    /**
+     * Get user display name for DMs (legacy - for single lookups)
      */
     private String getUserDisplayName(String token, String userId) {
         try {
@@ -344,10 +378,18 @@ public class SlackService {
             log.info("Sending message to {} (isDM={}) using {} token",
                     request.getChannelId(), isDM, isDM ? "user" : "bot");
 
+            // For channel messages via bot, prepend sender's info for identification
+            String messageText = request.getText();
+            if (!isDM) {
+                String senderName = user.getFullName() != null ? user.getFullName() : user.getUsername();
+                messageText = "<" + senderName + "님이 보낸 메시지입니다.>\n" + messageText;
+            }
+
+            final String finalMessageText = messageText;
             var response = slack.methods(token)
                     .chatPostMessage(req -> req
                             .channel(request.getChannelId())
-                            .text(request.getText())
+                            .text(finalMessageText)
                     );
 
             if (!response.isOk()) {
@@ -395,16 +437,24 @@ public class SlackService {
 
             log.info("Fetched {} messages from channel {}", response.getMessages().size(), channelId);
 
-            // Get current user's Slack user ID by making an auth.test call
+            // OPTIMIZATION: Batch fetch all user display names (1 API call instead of N)
+            Map<String, String> userDisplayNames = fetchAllUserDisplayNames(token);
+
+            // Get current user's Slack user ID using USER token (not bot token!)
+            // auth.test with bot token returns bot's ID, not user's ID
             String currentUserSlackId = null;
-            try {
-                var authResponse = slack.methods(token).authTest(req -> req);
-                if (authResponse.isOk()) {
-                    currentUserSlackId = authResponse.getUserId();
-                    log.info("Current user's Slack ID: {}", currentUserSlackId);
+            if (user.getSlackUserAccessToken() != null) {
+                try {
+                    var authResponse = slack.methods(user.getSlackUserAccessToken()).authTest(req -> req);
+                    if (authResponse.isOk()) {
+                        currentUserSlackId = authResponse.getUserId();
+                        log.info("Current user's Slack ID: {}", currentUserSlackId);
+                    }
+                } catch (Exception e) {
+                    log.warn("Failed to get current user's Slack ID", e);
                 }
-            } catch (Exception e) {
-                log.warn("Failed to get current user's Slack ID", e);
+            } else {
+                log.warn("User access token not available, cannot determine message ownership");
             }
 
             final String finalCurrentUserSlackId = currentUserSlackId;
@@ -416,7 +466,8 @@ public class SlackService {
 
                         if (message.getUser() != null) {
                             slackUserId = message.getUser();
-                            username = getUserDisplayName(token, slackUserId);
+                            // Use batch-fetched map instead of individual API calls
+                            username = getUserDisplayNameFromMap(userDisplayNames, slackUserId, "Unknown User");
                         } else if (message.getBotId() != null) {
                             username = message.getUsername() != null ? message.getUsername() : "Bot";
                         }

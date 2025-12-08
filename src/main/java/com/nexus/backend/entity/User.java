@@ -41,6 +41,10 @@ public class User {
     @Column(name = "role", length = 100)
     private String role;
 
+    @Column(name = "preferred_language", length = 10)
+    @Builder.Default
+    private String preferredLanguage = "ko";  // Default: Korean (ko, en, ja, vi, zh)
+
     // Outlook integration fields
     @Column(name = "outlook_email")
     private String outlookEmail;
