@@ -12,6 +12,7 @@ import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -51,6 +52,17 @@ public class VideoSubtitle {
     @Column(name = "translated_text", columnDefinition = "TEXT")
     private String translatedText;
 
+    // 원본 언어 코드 (ko, en, ja, vi 등)
+    @Column(name = "original_language", length = 10, nullable = false)
+    @Builder.Default
+    private String originalLanguage = "ko";
+
+    // 다국어 번역 저장 (JSONB: {"en": "...", "ja": "...", "vi": "..."})
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "translations", columnDefinition = "jsonb")
+    @Builder.Default
+    private Map<String, String> translations = new java.util.HashMap<>();
+
     // 화자 정보 (선택사항)
     @Column(name = "speaker_id")
     private Integer speakerId;
@@ -59,10 +71,10 @@ public class VideoSubtitle {
     @Column(name = "confidence_score", precision = 3, scale = 2)
     private BigDecimal confidenceScore;
 
-    // 탐지된 전문용어 (JSONB)
+    // 탐지된 전문용어 (JSONB - 배열 형태로 저장)
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "detected_terms", columnDefinition = "jsonb")
-    private Map<String, Object> detectedTerms;
+    private List<Object> detectedTerms;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

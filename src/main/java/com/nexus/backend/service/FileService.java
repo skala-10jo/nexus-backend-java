@@ -15,7 +15,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Service for managing files (documents and videos).
@@ -24,9 +29,10 @@ import java.util.UUID;
  * - Document uploads (PDF, DOCX, XLSX, TXT)
  * - Video uploads with metadata (source/target language)
  * - File retrieval and deletion
+ * - Subtitle information for videos
  *
  * @author NEXUS Team
- * @version 2.0
+ * @version 2.1
  * @since 2025-01-18
  */
 @Service
@@ -42,6 +48,7 @@ public class FileService {
     private final DocumentContentRepository documentContentRepository;
     private final GlossaryExtractionJobRepository glossaryExtractionJobRepository;
     private final VideoTranslationGlossaryRepository videoTranslationGlossaryRepository;
+    private final VideoSubtitleRepository videoSubtitleRepository;
 
     // Services
     private final FileStorageService fileStorageService;
@@ -233,6 +240,12 @@ public class FileService {
             videoTranslationGlossaryRepository.deleteByFileId(fileId);
             log.debug("Deleted video_translation_glossaries for file: {}", fileId);
 
+            // Video subtitles cleanup (must delete before VideoFile due to FK constraint)
+            if (file.getFileType() == FileType.VIDEO) {
+                videoSubtitleRepository.deleteByVideoFileId(fileId);
+                log.debug("Deleted video_subtitles for video file: {}", fileId);
+            }
+
             // 2. Clear ManyToMany relationships (project_files join table)
             if (file.getProjects() != null && !file.getProjects().isEmpty()) {
                 file.getProjects().clear();
@@ -322,9 +335,67 @@ public class FileService {
                     .resolution(vf.getResolution())
                     .sttStatus(vf.getSttStatus())
                     .translationStatus(vf.getTranslationStatus());
+
+            // Video-specific fields for frontend compatibility
+            builder.duration(vf.getDurationSeconds());  // alias for durationSeconds
+            builder.originalLanguage(vf.getSourceLanguage());
+
+            // Check subtitle existence and available languages
+            populateSubtitleInfo(builder, file.getId());
         }
 
         return builder.build();
+    }
+
+    /**
+     * Populate subtitle information for video response.
+     *
+     * @param builder FileResponse builder
+     * @param videoFileId Video file ID
+     */
+    private void populateSubtitleInfo(FileResponse.FileResponseBuilder builder, UUID videoFileId) {
+        try {
+            // Check if subtitles exist
+            boolean hasSubtitles = videoSubtitleRepository.existsByVideoFileId(videoFileId);
+            builder.hasSubtitles(hasSubtitles);
+
+            if (hasSubtitles) {
+                // Get first subtitle to determine original language
+                Optional<VideoSubtitle> firstSubtitle = videoSubtitleRepository
+                        .findFirstByVideoFileId(videoFileId);
+
+                if (firstSubtitle.isPresent()) {
+                    VideoSubtitle sub = firstSubtitle.get();
+
+                    // Set original language from subtitle if available
+                    if (sub.getOriginalLanguage() != null) {
+                        builder.originalLanguage(sub.getOriginalLanguage());
+                    }
+
+                    // Collect available languages (original + translations)
+                    List<String> availableLanguages = new ArrayList<>();
+                    availableLanguages.add(sub.getOriginalLanguage() != null
+                            ? sub.getOriginalLanguage() : "ko");
+
+                    // Add translated languages from translations map
+                    if (sub.getTranslations() != null && !sub.getTranslations().isEmpty()) {
+                        availableLanguages.addAll(sub.getTranslations().keySet());
+                    }
+
+                    builder.availableLanguages(availableLanguages);
+                }
+            } else {
+                builder.availableLanguages(new ArrayList<>());
+            }
+
+            // Thumbnail URL (null for now, can be extended later with FFmpeg)
+            builder.thumbnailUrl(null);
+
+        } catch (Exception e) {
+            log.warn("Failed to populate subtitle info for video: {}", videoFileId, e);
+            builder.hasSubtitles(false);
+            builder.availableLanguages(new ArrayList<>());
+        }
     }
 
     private FileDetailResponse mapToDetailResponse(File file) {

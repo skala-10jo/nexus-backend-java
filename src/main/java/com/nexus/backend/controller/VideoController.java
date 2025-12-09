@@ -5,18 +5,27 @@ import com.nexus.backend.dto.request.VideoUploadRequest;
 import com.nexus.backend.dto.response.ApiResponse;
 import com.nexus.backend.dto.response.FileResponse;
 import com.nexus.backend.entity.User;
+import com.nexus.backend.entity.VideoFile;
+import com.nexus.backend.repository.VideoFileRepository;
 import com.nexus.backend.service.FileService;
+import com.nexus.backend.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.Files;
 
 /**
  * REST Controller for video file management.
@@ -39,6 +48,8 @@ public class VideoController {
 
     private final FileService fileService;
     private final ObjectMapper objectMapper;
+    private final VideoFileRepository videoFileRepository;
+    private final FileStorageService fileStorageService;
 
     /**
      * Upload a video file.
@@ -126,6 +137,89 @@ public class VideoController {
                     user.getUsername(), ex.getMessage(), ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("영상 목록 조회 실패"));
+        }
+    }
+
+    /**
+     * Delete a video file.
+     *
+     * @param id   video file ID
+     * @param user authenticated user
+     * @return deletion result
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteVideo(
+            @PathVariable java.util.UUID id,
+            @AuthenticationPrincipal User user
+    ) {
+        try {
+            log.info("Video delete request: user={}, videoId={}", user.getUsername(), id);
+
+            fileService.deleteFile(id, user.getId());
+
+            log.info("Video deleted successfully: videoId={}", id);
+
+            return ResponseEntity.ok(ApiResponse.success("영상 삭제 완료", null));
+
+        } catch (Exception ex) {
+            log.error("Failed to delete video: videoId={}, user={}, error={}",
+                    id, user.getUsername(), ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("영상 삭제 실패: " + ex.getMessage()));
+        }
+    }
+
+    /**
+     * Stream a video file.
+     *
+     * @param id   video file ID
+     * @param user authenticated user
+     * @return video file stream
+     */
+    @GetMapping("/{id}/stream")
+    public ResponseEntity<Resource> streamVideo(
+            @PathVariable java.util.UUID id,
+            @AuthenticationPrincipal User user
+    ) {
+        try {
+            log.info("Video stream request: user={}, videoId={}", user.getUsername(), id);
+
+            // Find video file with file info
+            VideoFile videoFile = videoFileRepository.findByIdWithFile(id)
+                    .orElseThrow(() -> new RuntimeException("Video not found"));
+
+            // Security check: verify user owns this video
+            if (!videoFile.getFile().getUser().getId().equals(user.getId())) {
+                log.warn("Unauthorized video stream attempt: user={}, videoId={}",
+                        user.getUsername(), id);
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+
+            // Load video file as resource
+            String filePath = videoFile.getFile().getFilePath();
+            Resource resource = fileStorageService.loadFileAsResource(filePath);
+
+            // Determine content type
+            String contentType = videoFile.getFile().getMimeType();
+            if (contentType == null) {
+                try {
+                    contentType = Files.probeContentType(fileStorageService.getFilePath(filePath));
+                } catch (IOException e) {
+                    contentType = "video/mp4";
+                }
+            }
+
+            log.debug("Streaming video: path={}, contentType={}", filePath, contentType);
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "inline; filename=\"" + videoFile.getFile().getOriginalFilename() + "\"")
+                    .body(resource);
+
+        } catch (Exception ex) {
+            log.error("Failed to stream video: videoId={}, error={}", id, ex.getMessage(), ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 }
