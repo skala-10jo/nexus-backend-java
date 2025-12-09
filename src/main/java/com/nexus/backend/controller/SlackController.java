@@ -86,7 +86,7 @@ public class SlackController {
     }
 
     /**
-     * Send a message to a Slack channel
+     * Send a message to a Slack channel (with WebSocket broadcast)
      */
     @PostMapping("/send")
     public ResponseEntity<Map<String, String>> sendMessage(
@@ -94,7 +94,8 @@ public class SlackController {
             @AuthenticationPrincipal User user) {
         log.info("Sending message to Slack channel: {} for user: {}",
                 request.getChannelId(), user.getId());
-        slackService.sendMessage(request, user);
+        // Use sendMessageAndBroadcast to also notify WebSocket subscribers
+        slackService.sendMessageAndBroadcast(request, user);
         return ResponseEntity.ok(Map.of("message", "Message sent successfully"));
     }
 
