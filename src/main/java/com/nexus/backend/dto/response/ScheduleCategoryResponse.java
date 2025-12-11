@@ -24,6 +24,9 @@ public class ScheduleCategoryResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // Outlook 범주 연동 정보
+    private Boolean isFromOutlook;
+
     // Statistics (optional)
     private Long scheduleCount;
 }

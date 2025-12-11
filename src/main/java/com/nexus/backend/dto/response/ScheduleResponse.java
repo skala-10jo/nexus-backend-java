@@ -30,6 +30,11 @@ public class ScheduleResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // Outlook Calendar 연동 정보
+    private Boolean isFromOutlook;
+    private String attendees;
+    private String organizer;
+
     // Project information
     private ProjectInfo project;
 
@@ -56,6 +61,7 @@ public class ScheduleResponse {
         private String name;
         private String color;
         private String icon;
+        private Boolean isFromOutlook;
     }
 
     public static ScheduleResponse from(Schedule schedule) {
@@ -65,6 +71,7 @@ public class ScheduleResponse {
                         .name(cat.getName())
                         .color(cat.getColor())
                         .icon(cat.getIcon())
+                        .isFromOutlook(cat.getIsFromOutlook())
                         .build())
                 .collect(Collectors.toList());
 
@@ -86,6 +93,9 @@ public class ScheduleResponse {
                 .allDay(schedule.getAllDay())
                 .color(schedule.getColor())
                 .location(schedule.getLocation())
+                .isFromOutlook(schedule.getIsFromOutlook())
+                .attendees(schedule.getAttendees())
+                .organizer(schedule.getOrganizer())
                 .project(projectInfo)
                 .categories(categoryInfos)
                 .createdAt(schedule.getCreatedAt())

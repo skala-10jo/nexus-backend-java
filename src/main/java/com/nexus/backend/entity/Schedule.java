@@ -52,6 +52,22 @@ public class Schedule {
     @Column(length = 50)
     private String location;
 
+    // Outlook Calendar 연동 필드
+    @Column(name = "outlook_event_id", unique = true)
+    private String outlookEventId;
+
+    @Column(name = "is_from_outlook")
+    @Builder.Default
+    private Boolean isFromOutlook = false;
+
+    // 참석자 정보 (Outlook에서 가져온 경우)
+    @Column(name = "attendees", columnDefinition = "TEXT")
+    private String attendees;
+
+    // 주최자 정보 (Outlook에서 가져온 경우)
+    @Column(name = "organizer")
+    private String organizer;
+
     // Many-to-One relationship with Project
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id")

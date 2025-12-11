@@ -38,7 +38,8 @@ public class OutlookAuthService {
             "User.Read",
             "Mail.Read",
             "Mail.ReadWrite",
-            "Mail.Send"
+            "Mail.Send",
+            "Calendars.Read"
     );
 
     /**

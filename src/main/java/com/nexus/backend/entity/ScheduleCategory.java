@@ -55,6 +55,14 @@ public class ScheduleCategory {
     @Builder.Default
     private Integer displayOrder = 0;
 
+    // Outlook 범주 연동 필드
+    @Column(name = "outlook_category_id")
+    private String outlookCategoryId;
+
+    @Column(name = "is_from_outlook")
+    @Builder.Default
+    private Boolean isFromOutlook = false;
+
     @ManyToMany(mappedBy = "categories")
     @Builder.Default
     private List<Schedule> schedules = new ArrayList<>();

@@ -47,4 +47,11 @@ public interface ScheduleCategoryRepository extends JpaRepository<ScheduleCatego
      * Delete all categories for a user
      */
     void deleteByUserId(UUID userId);
+
+    // Outlook 범주 동기화용 메서드
+    Optional<ScheduleCategory> findByOutlookCategoryIdAndUserId(String outlookCategoryId, UUID userId);
+
+    Optional<ScheduleCategory> findByUserIdAndName(UUID userId, String name);
+
+    List<ScheduleCategory> findByUserIdAndIsFromOutlookTrue(UUID userId);
 }

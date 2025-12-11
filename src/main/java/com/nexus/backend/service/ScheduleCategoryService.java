@@ -146,6 +146,7 @@ public class ScheduleCategoryService {
                 .description(category.getDescription())
                 .isDefault(category.getIsDefault())
                 .displayOrder(category.getDisplayOrder())
+                .isFromOutlook(category.getIsFromOutlook())
                 .createdAt(category.getCreatedAt())
                 .updatedAt(category.getUpdatedAt())
                 .scheduleCount((long) category.getSchedules().size())
