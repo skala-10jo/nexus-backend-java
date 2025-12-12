@@ -5,10 +5,8 @@ import com.nexus.backend.dto.request.VideoUploadRequest;
 import com.nexus.backend.dto.response.ApiResponse;
 import com.nexus.backend.dto.response.FileResponse;
 import com.nexus.backend.entity.User;
-import com.nexus.backend.entity.VideoFile;
-import com.nexus.backend.repository.VideoFileRepository;
+import com.nexus.backend.exception.ServiceException;
 import com.nexus.backend.service.FileService;
-import com.nexus.backend.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
@@ -23,9 +21,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
-import java.nio.file.Files;
 
 /**
  * REST Controller for video file management.
@@ -45,8 +40,6 @@ public class VideoController {
 
     private final FileService fileService;
     private final ObjectMapper objectMapper;
-    private final VideoFileRepository videoFileRepository;
-    private final FileStorageService fileStorageService;
 
     /**
      * Upload a video file.
@@ -68,18 +61,8 @@ public class VideoController {
             // Parse VideoUploadRequest from JSON string
             VideoUploadRequest request = objectMapper.readValue(requestJson, VideoUploadRequest.class);
 
-            // Validate file
-            if (file.isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("영상 파일이 비어있습니다"));
-            }
-
-            // Validate MIME type (video types)
-            String contentType = file.getContentType();
-            if (contentType == null || !contentType.startsWith("video/")) {
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("영상 파일만 업로드 가능합니다"));
-            }
+            // Validate file (delegated to Service)
+            fileService.validateVideoFile(file);
 
             // Upload video
             FileResponse response = fileService.uploadVideo(file, request, user);
@@ -89,6 +72,11 @@ public class VideoController {
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("영상 업로드 완료", response));
 
+        } catch (ServiceException ex) {
+            log.warn("Video upload validation failed: user={}, error={}",
+                    user.getUsername(), ex.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(ex.getMessage()));
         } catch (Exception ex) {
             log.error("Video upload failed: user={}, error={}",
                     user.getUsername(), ex.getMessage(), ex);
@@ -177,39 +165,20 @@ public class VideoController {
         try {
             log.info("Video stream request: user={}, videoId={}", user.getUsername(), id);
 
-            // Find video file with file info
-            VideoFile videoFile = videoFileRepository.findByIdWithFile(id)
-                    .orElseThrow(() -> new RuntimeException("Video not found"));
+            // Get video stream resource from Service (all business logic delegated)
+            FileService.VideoStreamResult streamResult = fileService.getVideoStreamResource(id, user.getId());
 
-            // Security check: verify user owns this video
-            if (!videoFile.getFile().getUser().getId().equals(user.getId())) {
-                log.warn("Unauthorized video stream attempt: user={}, videoId={}",
-                        user.getUsername(), id);
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-            }
-
-            // Load video file as resource
-            String filePath = videoFile.getFile().getFilePath();
-            Resource resource = fileStorageService.loadFileAsResource(filePath);
-
-            // Determine content type
-            String contentType = videoFile.getFile().getMimeType();
-            if (contentType == null) {
-                try {
-                    contentType = Files.probeContentType(fileStorageService.getFilePath(filePath));
-                } catch (IOException e) {
-                    contentType = "video/mp4";
-                }
-            }
-
-            log.debug("Streaming video: path={}, contentType={}", filePath, contentType);
+            log.debug("Streaming video: videoId={}, contentType={}", id, streamResult.contentType());
 
             return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType(contentType))
+                    .contentType(MediaType.parseMediaType(streamResult.contentType()))
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "inline; filename=\"" + videoFile.getFile().getOriginalFilename() + "\"")
-                    .body(resource);
+                            "inline; filename=\"" + streamResult.filename() + "\"")
+                    .body(streamResult.resource());
 
+        } catch (ServiceException ex) {
+            log.warn("Video stream access denied: videoId={}, error={}", id, ex.getMessage());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         } catch (Exception ex) {
             log.error("Failed to stream video: videoId={}, error={}", id, ex.getMessage(), ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
