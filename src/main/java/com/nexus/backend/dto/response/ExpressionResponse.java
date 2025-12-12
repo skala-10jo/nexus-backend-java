@@ -1,4 +1,4 @@
-package com.nexus.backend.dto.expression;
+package com.nexus.backend.dto.response;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,12 +12,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Expression Response DTO
- *
- * @author NEXUS Team
- * @since 2025-01-21
- */
 @Data
 @Builder
 @NoArgsConstructor

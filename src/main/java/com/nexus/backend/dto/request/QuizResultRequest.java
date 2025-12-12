@@ -1,4 +1,4 @@
-package com.nexus.backend.dto.expression;
+package com.nexus.backend.dto.request;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -8,13 +8,6 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
-/**
- * Quiz Result Request DTO
- * 퀴즈 결과 저장 요청
- *
- * @author NEXUS Team
- * @since 2025-12-01
- */
 @Data
 @Builder
 @NoArgsConstructor
