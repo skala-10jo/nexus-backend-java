@@ -1,4 +1,4 @@
-package com.nexus.backend.dto.expression;
+package com.nexus.backend.dto.request;
 
 import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
@@ -9,12 +9,6 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Mark Learned Request DTO
- *
- * @author NEXUS Team
- * @since 2025-01-21
- */
 @Data
 @Builder
 @NoArgsConstructor

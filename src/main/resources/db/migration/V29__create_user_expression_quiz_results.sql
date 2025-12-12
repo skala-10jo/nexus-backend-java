@@ -2,8 +2,6 @@
 --
 -- Purpose: 사용자별 표현 퀴즈 결과 관리 (예문별 정답/오답 횟수 추적)
 --
--- Author: NEXUS Team
--- Date: 2025-12-01
 
 CREATE TABLE user_expression_quiz_results (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

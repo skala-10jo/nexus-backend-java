@@ -1,6 +1,4 @@
 -- V21: Rollback V13 (Remove video_documents system)
--- Author: NEXUS Team
--- Date: 2025-01-19
 --
 -- Reason: Consolidating to files/video_files architecture
 -- The video_documents system (V13) is incompatible with the new files-based system (V14-V18)

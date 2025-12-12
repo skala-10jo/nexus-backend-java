@@ -1,4 +1,4 @@
-package com.nexus.backend.dto.expression;
+package com.nexus.backend.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -7,13 +7,6 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 
-/**
- * Daily Quiz Stats Response DTO
- * 일별 퀴즈 통계 응답
- *
- * @author NEXUS Team
- * @since 2025-12-05
- */
 @Data
 @Builder
 @NoArgsConstructor

@@ -1,6 +1,4 @@
 -- V22: Create video_subtitles table (for video_files system)
--- Author: NEXUS Team
--- Date: 2025-01-19
 --
 -- This table stores subtitle segments for video files
 -- Replaces the old video_subtitles (V13) which referenced video_documents

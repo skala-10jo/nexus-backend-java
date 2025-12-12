@@ -1,4 +1,4 @@
-package com.nexus.backend.dto.expression;
+package com.nexus.backend.dto.response;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,13 +12,6 @@ import lombok.NoArgsConstructor;
 import java.time.ZonedDateTime;
 import java.util.UUID;
 
-/**
- * Mistake Response DTO
- * 오답노트 응답
- *
- * @author NEXUS Team
- * @since 2025-12-01
- */
 @Data
 @Builder
 @NoArgsConstructor

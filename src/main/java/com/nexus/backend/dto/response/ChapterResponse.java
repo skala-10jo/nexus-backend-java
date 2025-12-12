@@ -1,23 +1,17 @@
-package com.nexus.backend.dto.expression;
+package com.nexus.backend.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * Unit Response DTO
- *
- * @author NEXUS Team
- * @since 2025-01-21
- */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UnitResponse {
+public class ChapterResponse {
 
-    private String unit;
+    private String chapter;
     private Long totalCount;      // 전체 표현 개수
     private Long quizAttemptedCount;  // 퀴즈를 푼 표현 개수
     private Long correctCount;    // 정답 개수

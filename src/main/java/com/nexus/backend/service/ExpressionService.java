@@ -1,12 +1,12 @@
 package com.nexus.backend.service;
 
-import com.nexus.backend.dto.expression.ChapterResponse;
-import com.nexus.backend.dto.expression.DailyQuizStatsResponse;
-import com.nexus.backend.dto.expression.ExpressionResponse;
-import com.nexus.backend.dto.expression.MarkLearnedRequest;
-import com.nexus.backend.dto.expression.MistakeResponse;
-import com.nexus.backend.dto.expression.QuizResultRequest;
-import com.nexus.backend.dto.expression.UnitResponse;
+import com.nexus.backend.dto.request.MarkLearnedRequest;
+import com.nexus.backend.dto.request.QuizResultRequest;
+import com.nexus.backend.dto.response.ChapterResponse;
+import com.nexus.backend.dto.response.DailyQuizStatsResponse;
+import com.nexus.backend.dto.response.ExpressionResponse;
+import com.nexus.backend.dto.response.MistakeResponse;
+import com.nexus.backend.dto.response.UnitResponse;
 import com.nexus.backend.entity.Expression;
 import com.nexus.backend.entity.User;
 import com.nexus.backend.entity.UserExpression;
@@ -30,9 +30,7 @@ import java.util.stream.Collectors;
 
 /**
  * Expression Service
- *
- * @author NEXUS Team
- * @since 2025-01-21
+
  */
 @Slf4j
 @Service

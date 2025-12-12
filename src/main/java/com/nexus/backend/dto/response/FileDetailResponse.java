@@ -12,10 +12,7 @@ import java.util.UUID;
 /**
  * Detailed response DTO for File entity.
  * Used for detail views with complete file information.
- *
- * @author NEXUS Team
- * @version 1.0
- * @since 2025-01-18
+
  */
 @Data
 @Builder

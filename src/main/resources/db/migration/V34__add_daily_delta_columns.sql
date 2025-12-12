@@ -3,8 +3,7 @@
 -- Purpose: 일별 정확한 통계를 위한 증분 필드 추가
 -- 기존 correct_count/incorrect_count는 누적값, 새 필드는 일별 증분
 --
--- Author: NEXUS Team
--- Date: 2025-12-05
+
 
 -- 일별 증분 추적 필드 추가
 ALTER TABLE user_expression_quiz_results

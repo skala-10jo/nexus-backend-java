@@ -24,7 +24,6 @@ import java.util.UUID;
  * Delegates to FileService (new structure).
  *
  * @deprecated Use FileController instead (/api/files)
- * @author NEXUS Team
  */
 @RestController
 @RequestMapping("/api/documents")
