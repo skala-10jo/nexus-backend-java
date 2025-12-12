@@ -4,6 +4,8 @@ import com.nexus.backend.dto.request.VideoUploadRequest;
 import com.nexus.backend.dto.response.FileDetailResponse;
 import com.nexus.backend.dto.response.FileResponse;
 import com.nexus.backend.entity.*;
+import com.nexus.backend.exception.ResourceNotFoundException;
+import com.nexus.backend.exception.ServiceException;
 import com.nexus.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -99,7 +101,7 @@ public class FileService {
 
         } catch (Exception ex) {
             log.error("Failed to upload document", ex);
-            throw new RuntimeException("Failed to upload document", ex);
+            throw new ServiceException("Failed to upload document", ex);
         }
     }
 
@@ -153,7 +155,7 @@ public class FileService {
 
         } catch (Exception ex) {
             log.error("Failed to upload video", ex);
-            throw new RuntimeException("Failed to upload video", ex);
+            throw new ServiceException("Failed to upload video", ex);
         }
     }
 
@@ -193,7 +195,7 @@ public class FileService {
     public FileDetailResponse getFileDetail(UUID fileId, UUID userId) {
         log.debug("Reading file detail: fileId={}", fileId);
         File file = fileRepository.findByIdAndUserId(fileId, userId)
-                .orElseThrow(() -> new RuntimeException("File not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("File", "id", fileId));
 
         return mapToDetailResponse(file);
     }
@@ -214,7 +216,7 @@ public class FileService {
     @Transactional
     public void deleteFile(UUID fileId, UUID userId) {
         File file = fileRepository.findByIdAndUserId(fileId, userId)
-                .orElseThrow(() -> new RuntimeException("File not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("File", "id", fileId));
 
         log.info("Starting file deletion: fileId={}, filename={}", fileId, file.getOriginalFilename());
 
@@ -270,9 +272,11 @@ public class FileService {
             log.info("Successfully deleted file: fileId={}, filename={}",
                     fileId, file.getOriginalFilename());
 
+        } catch (ResourceNotFoundException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Failed to delete file: fileId={}, error={}", fileId, e.getMessage(), e);
-            throw new RuntimeException("Failed to delete file: " + e.getMessage(), e);
+            throw new ServiceException("Failed to delete file: " + e.getMessage(), e);
         }
     }
 

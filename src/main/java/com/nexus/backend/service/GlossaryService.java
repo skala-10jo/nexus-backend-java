@@ -9,6 +9,8 @@ import com.nexus.backend.entity.File;
 import com.nexus.backend.entity.GlossaryExtractionJob;
 import com.nexus.backend.entity.GlossaryTerm;
 import com.nexus.backend.entity.User;
+import com.nexus.backend.exception.ConflictException;
+import com.nexus.backend.exception.ResourceNotFoundException;
 import com.nexus.backend.repository.FileRepository;
 import com.nexus.backend.repository.GlossaryExtractionJobRepository;
 import com.nexus.backend.repository.GlossaryTermRepository;
@@ -47,14 +49,14 @@ public class GlossaryService {
 
         // Find file
         File file = fileRepository.findById(fileId)
-                .orElseThrow(() -> new RuntimeException("File not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("File", "id", fileId));
 
         // Check if there's an active job (PENDING or PROCESSING)
         Optional<GlossaryExtractionJob> existingJob = extractionJobRepository.findByFileId(fileId);
         if (existingJob.isPresent()) {
             String status = existingJob.get().getStatus();
             if ("PENDING".equals(status) || "PROCESSING".equals(status)) {
-                throw new RuntimeException("Extraction is already in progress for this file");
+                throw new ConflictException("Extraction is already in progress for this file");
             }
             // Delete old FAILED or COMPLETED job to allow re-extraction
             extractionJobRepository.delete(existingJob.get());
@@ -113,7 +115,7 @@ public class GlossaryService {
     @Transactional(readOnly = true)
     public ExtractionJobResponse getExtractionStatus(UUID jobId) {
         GlossaryExtractionJob job = extractionJobRepository.findById(jobId)
-                .orElseThrow(() -> new RuntimeException("Extraction job not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("ExtractionJob", "id", jobId));
 
         return ExtractionJobResponse.from(job);
     }
@@ -196,7 +198,7 @@ public class GlossaryService {
     @Transactional(readOnly = true)
     public GlossaryTermResponse getTermDetail(UUID termId, User user) {
         GlossaryTerm term = glossaryTermRepository.findByIdAndUserId(termId, user.getId())
-                .orElseThrow(() -> new RuntimeException("Glossary term not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("GlossaryTerm", "id", termId));
 
         return GlossaryTermResponse.from(term);
     }
@@ -205,7 +207,7 @@ public class GlossaryService {
     public GlossaryTermResponse createTerm(GlossaryTermRequest request, User user) {
         // Check if term already exists for this user
         if (glossaryTermRepository.existsByUserIdAndKoreanTerm(user.getId(), request.getKoreanTerm())) {
-            throw new RuntimeException("Term already exists in your glossary");
+            throw new ConflictException("GlossaryTerm", "koreanTerm", request.getKoreanTerm());
         }
 
         GlossaryTerm term = GlossaryTerm.builder()
@@ -234,7 +236,7 @@ public class GlossaryService {
     @Transactional
     public GlossaryTermResponse updateTerm(UUID termId, GlossaryTermRequest request, User user) {
         GlossaryTerm term = glossaryTermRepository.findByIdAndUserId(termId, user.getId())
-                .orElseThrow(() -> new RuntimeException("Glossary term not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("GlossaryTerm", "id", termId));
 
         term.setKoreanTerm(request.getKoreanTerm());
         term.setEnglishTerm(request.getEnglishTerm());
@@ -256,7 +258,7 @@ public class GlossaryService {
     @Transactional
     public void deleteTerm(UUID termId, User user) {
         GlossaryTerm term = glossaryTermRepository.findByIdAndUserId(termId, user.getId())
-                .orElseThrow(() -> new RuntimeException("Glossary term not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("GlossaryTerm", "id", termId));
 
         glossaryTermRepository.delete(term);
         log.info("Deleted glossary term: {}", termId);
@@ -269,7 +271,7 @@ public class GlossaryService {
         for (UUID termId : termIds) {
             try {
                 GlossaryTerm term = glossaryTermRepository.findByIdAndUserId(termId, user.getId())
-                        .orElseThrow(() -> new RuntimeException("Glossary term not found: " + termId));
+                        .orElseThrow(() -> new ResourceNotFoundException("GlossaryTerm", "id", termId));
                 glossaryTermRepository.delete(term);
             } catch (Exception e) {
                 log.error("Failed to delete term {}: {}", termId, e.getMessage());
@@ -283,7 +285,7 @@ public class GlossaryService {
     @Transactional
     public GlossaryTermResponse verifyTerm(UUID termId, User user) {
         GlossaryTerm term = glossaryTermRepository.findByIdAndUserId(termId, user.getId())
-                .orElseThrow(() -> new RuntimeException("Glossary term not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("GlossaryTerm", "id", termId));
 
         term.setIsVerified(true);
         // Don't change status - it represents data source, not verification state
@@ -297,7 +299,7 @@ public class GlossaryService {
     @Transactional
     public GlossaryTermResponse unverifyTerm(UUID termId, User user) {
         GlossaryTerm term = glossaryTermRepository.findByIdAndUserId(termId, user.getId())
-                .orElseThrow(() -> new RuntimeException("Glossary term not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("GlossaryTerm", "id", termId));
 
         term.setIsVerified(false);
         // Don't change status - it represents data source, not verification state

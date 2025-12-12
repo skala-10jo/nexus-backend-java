@@ -6,6 +6,8 @@ import com.nexus.backend.entity.Project;
 import com.nexus.backend.entity.Schedule;
 import com.nexus.backend.entity.ScheduleCategory;
 import com.nexus.backend.entity.User;
+import com.nexus.backend.exception.ResourceNotFoundException;
+import com.nexus.backend.exception.UnauthorizedException;
 import com.nexus.backend.repository.ProjectRepository;
 import com.nexus.backend.repository.ScheduleCategoryRepository;
 import com.nexus.backend.repository.ScheduleRepository;
@@ -62,11 +64,11 @@ public class ScheduleService {
     @Transactional(readOnly = true)
     public ScheduleResponse getScheduleById(UUID scheduleId, UUID userId) {
         Schedule schedule = scheduleRepository.findById(scheduleId)
-                .orElseThrow(() -> new RuntimeException("Schedule not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Schedule", "id", scheduleId));
 
         // 해당 일정이 현재 사용자의 것인지 확인
         if (!schedule.getUser().getId().equals(userId)) {
-            throw new RuntimeException("Unauthorized access to schedule");
+            throw new UnauthorizedException("Unauthorized access to schedule");
         }
 
         return ScheduleResponse.from(schedule);
@@ -75,17 +77,17 @@ public class ScheduleService {
     @Transactional
     public ScheduleResponse createSchedule(UUID userId, ScheduleRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
         // Fetch project if project ID provided
         Project project = null;
         if (request.getProjectId() != null) {
             project = projectRepository.findById(request.getProjectId())
-                    .orElseThrow(() -> new RuntimeException("Project not found: " + request.getProjectId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Project", "id", request.getProjectId()));
 
             // Verify project belongs to user
             if (!project.getUser().getId().equals(userId)) {
-                throw new RuntimeException("Unauthorized access to project");
+                throw new UnauthorizedException("Unauthorized access to project");
             }
         }
 
@@ -94,7 +96,7 @@ public class ScheduleService {
         if (request.getCategoryIds() != null && !request.getCategoryIds().isEmpty()) {
             for (UUID categoryId : request.getCategoryIds()) {
                 ScheduleCategory category = categoryRepository.findByIdAndUserId(categoryId, userId)
-                        .orElseThrow(() -> new RuntimeException("Category not found: " + categoryId));
+                        .orElseThrow(() -> new ResourceNotFoundException("ScheduleCategory", "id", categoryId));
                 categories.add(category);
             }
         }
@@ -119,21 +121,21 @@ public class ScheduleService {
     @Transactional
     public ScheduleResponse updateSchedule(UUID scheduleId, UUID userId, ScheduleRequest request) {
         Schedule schedule = scheduleRepository.findById(scheduleId)
-                .orElseThrow(() -> new RuntimeException("Schedule not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Schedule", "id", scheduleId));
 
         // 해당 일정이 현재 사용자의 것인지 확인
         if (!schedule.getUser().getId().equals(userId)) {
-            throw new RuntimeException("Unauthorized access to schedule");
+            throw new UnauthorizedException("Unauthorized access to schedule");
         }
 
         // Update project if provided
         if (request.getProjectId() != null) {
             Project project = projectRepository.findById(request.getProjectId())
-                    .orElseThrow(() -> new RuntimeException("Project not found: " + request.getProjectId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Project", "id", request.getProjectId()));
 
             // Verify project belongs to user
             if (!project.getUser().getId().equals(userId)) {
-                throw new RuntimeException("Unauthorized access to project");
+                throw new UnauthorizedException("Unauthorized access to project");
             }
             schedule.setProject(project);
         } else {
@@ -145,7 +147,7 @@ public class ScheduleService {
             List<ScheduleCategory> categories = new ArrayList<>();
             for (UUID categoryId : request.getCategoryIds()) {
                 ScheduleCategory category = categoryRepository.findByIdAndUserId(categoryId, userId)
-                        .orElseThrow(() -> new RuntimeException("Category not found: " + categoryId));
+                        .orElseThrow(() -> new ResourceNotFoundException("ScheduleCategory", "id", categoryId));
                 categories.add(category);
             }
             schedule.setCategories(categories);
@@ -166,11 +168,11 @@ public class ScheduleService {
     @Transactional
     public void deleteSchedule(UUID scheduleId, UUID userId) {
         Schedule schedule = scheduleRepository.findById(scheduleId)
-                .orElseThrow(() -> new RuntimeException("Schedule not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Schedule", "id", scheduleId));
 
         // 해당 일정이 현재 사용자의 것인지 확인
         if (!schedule.getUser().getId().equals(userId)) {
-            throw new RuntimeException("Unauthorized access to schedule");
+            throw new UnauthorizedException("Unauthorized access to schedule");
         }
 
         scheduleRepository.delete(schedule);

@@ -5,6 +5,8 @@ import com.nexus.backend.dto.request.RegisterRequest;
 import com.nexus.backend.dto.response.AuthResponse;
 import com.nexus.backend.dto.response.UserResponse;
 import com.nexus.backend.entity.User;
+import com.nexus.backend.exception.ConflictException;
+import com.nexus.backend.exception.UnauthorizedException;
 import com.nexus.backend.repository.UserRepository;
 import com.nexus.backend.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
@@ -24,12 +26,12 @@ public class AuthService {
     public AuthResponse register(RegisterRequest request) {
         // Check if username already exists
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("A user with this username already exists");
+            throw new ConflictException("User", "username", request.getUsername());
         }
 
         // Check if email already exists
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("A user with this email already exists");
+            throw new ConflictException("User", "email", request.getEmail());
         }
 
         // Create user
@@ -55,11 +57,11 @@ public class AuthService {
     public AuthResponse login(LoginRequest request) {
         // Find user by username
         User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new RuntimeException("Invalid username or password"));
+                .orElseThrow(() -> new UnauthorizedException("Invalid username or password"));
 
         // Verify password
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw new RuntimeException("Invalid username or password");
+            throw new UnauthorizedException("Invalid username or password");
         }
 
         // Generate token
