@@ -13,6 +13,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.nexus.backend.exception.BadRequestException;
+import com.nexus.backend.exception.ResourceNotFoundException;
+import com.nexus.backend.exception.ServiceException;
+
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Set;
@@ -53,7 +57,7 @@ public class OutlookAuthService {
                     .build();
         } catch (Exception e) {
             log.error("Failed to build MSAL app", e);
-            throw new RuntimeException("MSAL 앱 생성 실패: " + e.getMessage());
+            throw new ServiceException("MSAL 앱 생성 실패: " + e.getMessage(), e);
         }
     }
 
@@ -116,7 +120,7 @@ public class OutlookAuthService {
     @Transactional
     private void saveAuthenticationResult(UUID userId, IAuthenticationResult result) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
         user.setOutlookEmail(result.account().username());
         user.setOutlookAccessToken(result.accessToken());
@@ -157,7 +161,7 @@ public class OutlookAuthService {
 
             if (result != null && result.accessToken() != null) {
                 User user = userRepository.findById(userId)
-                        .orElseThrow(() -> new RuntimeException("User not found"));
+                        .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
                 user.setOutlookEmail(result.account().username());
                 user.setOutlookAccessToken(result.accessToken());
@@ -179,9 +183,11 @@ public class OutlookAuthService {
                         .build();
             }
 
+        } catch (ResourceNotFoundException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Failed to complete authentication", e);
-            throw new RuntimeException("인증 완료 실패: " + e.getMessage());
+            throw new ServiceException("인증 완료 실패: " + e.getMessage(), e);
         }
 
         return OutlookAuthStatusResponse.builder()
@@ -195,7 +201,7 @@ public class OutlookAuthService {
      */
     public OutlookAuthStatusResponse getAuthStatus(UUID userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
         boolean isConnected = user.getOutlookAccessToken() != null
                 && user.getOutlookTokenExpiresAt() != null
@@ -215,7 +221,7 @@ public class OutlookAuthService {
     @Transactional
     public void disconnect(UUID userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
         // 메일 데이터는 유지 (프로젝트 할당 등 보존)
         // emailRepository.deleteByUserId(userId);  // 삭제하지 않음!
@@ -236,7 +242,7 @@ public class OutlookAuthService {
      */
     public GraphServiceClient createGraphClient(User user) {
         if (user.getOutlookAccessToken() == null) {
-            throw new RuntimeException("No Outlook access token found");
+            throw new BadRequestException("Outlook 계정이 연동되지 않았습니다");
         }
 
         // Custom TokenCredential 사용하여 GraphServiceClient 생성

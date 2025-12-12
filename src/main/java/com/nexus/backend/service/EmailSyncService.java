@@ -9,6 +9,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.nexus.backend.exception.BadRequestException;
+import com.nexus.backend.exception.ResourceNotFoundException;
+import com.nexus.backend.exception.ServiceException;
+
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -34,10 +38,10 @@ public class EmailSyncService {
     @Transactional
     public int syncUserEmails(UUID userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
         if (user.getOutlookAccessToken() == null) {
-            throw new RuntimeException("Outlook 계정이 연동되지 않았습니다");
+            throw new BadRequestException("Outlook 계정이 연동되지 않았습니다");
         }
 
         try {
@@ -58,9 +62,11 @@ public class EmailSyncService {
             log.info("Total synced {} new emails for user: {}", totalSynced, userId);
             return totalSynced;
 
+        } catch (ResourceNotFoundException | BadRequestException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Failed to sync emails for user: {}", userId, e);
-            throw new RuntimeException("메일 동기화 실패: " + e.getMessage());
+            throw new ServiceException("메일 동기화 실패: " + e.getMessage(), e);
         }
     }
 
@@ -70,10 +76,10 @@ public class EmailSyncService {
     @Transactional
     public int syncSentItems(UUID userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
         if (user.getOutlookAccessToken() == null) {
-            throw new RuntimeException("Outlook 계정이 연동되지 않았습니다");
+            throw new BadRequestException("Outlook 계정이 연동되지 않았습니다");
         }
 
         try {
@@ -89,9 +95,11 @@ public class EmailSyncService {
             log.info("Synced {} new emails from SentItems for user: {}", syncedCount, userId);
             return syncedCount;
 
+        } catch (ResourceNotFoundException | BadRequestException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Failed to sync SentItems for user: {}", userId, e);
-            throw new RuntimeException("보낸메일함 동기화 실패: " + e.getMessage());
+            throw new ServiceException("보낸메일함 동기화 실패: " + e.getMessage(), e);
         }
     }
 
@@ -339,7 +347,7 @@ public class EmailSyncService {
     @Transactional
     public int deltaSyncEmails(UUID userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
         if (user.getOutlookDeltaLink() == null) {
             // 첫 동기화인 경우 전체 동기화
@@ -352,9 +360,11 @@ public class EmailSyncService {
 
             return 0;
 
+        } catch (ResourceNotFoundException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Failed to delta sync emails for user: {}", userId, e);
-            throw new RuntimeException("Delta 동기화 실패: " + e.getMessage());
+            throw new ServiceException("Delta 동기화 실패: " + e.getMessage(), e);
         }
     }
 }

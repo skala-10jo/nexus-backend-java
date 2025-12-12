@@ -21,6 +21,10 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.nexus.backend.exception.BadRequestException;
+import com.nexus.backend.exception.ResourceNotFoundException;
+import com.nexus.backend.exception.ServiceException;
+
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -84,7 +88,7 @@ public class SlackService {
             OAuthV2AccessResponse response = slack.methods().oauthV2Access(request);
 
             if (!response.isOk()) {
-                throw new RuntimeException("Failed to exchange OAuth code: " + response.getError());
+                throw new ServiceException("Failed to exchange OAuth code: " + response.getError());
             }
 
             // Update user's Slack integration fields
@@ -115,9 +119,11 @@ public class SlackService {
 
             return SlackIntegrationResponse.from(user);
 
+        } catch (ServiceException e) {
+            throw e;
         } catch (IOException | SlackApiException e) {
             log.error("Error during Slack OAuth callback", e);
-            throw new RuntimeException("Failed to complete Slack OAuth: " + e.getMessage());
+            throw new ServiceException("Failed to complete Slack OAuth: " + e.getMessage(), e);
         }
     }
 
@@ -127,7 +133,7 @@ public class SlackService {
     @Transactional(readOnly = true)
     public SlackIntegrationResponse getIntegration(User user) {
         if (user.getSlackWorkspaceId() == null) {
-            throw new RuntimeException("Slack integration not found");
+            throw new ResourceNotFoundException("Slack integration not found");
         }
         return SlackIntegrationResponse.from(user);
     }
@@ -158,11 +164,11 @@ public class SlackService {
     @Transactional(readOnly = true)
     public List<SlackChannelResponse> getChannels(User user) {
         if (user.getSlackWorkspaceId() == null) {
-            throw new RuntimeException("Slack integration not found");
+            throw new ResourceNotFoundException("Slack integration not found");
         }
 
         if (!Boolean.TRUE.equals(user.getSlackIsActive())) {
-            throw new RuntimeException("Slack integration is not active");
+            throw new BadRequestException("Slack integration is not active");
         }
 
         try {
@@ -178,7 +184,7 @@ public class SlackService {
             ConversationsListResponse channelsResponse = slack.methods().conversationsList(channelsRequest);
 
             if (!channelsResponse.isOk()) {
-                throw new RuntimeException("Failed to fetch channels: " + channelsResponse.getError());
+                throw new ServiceException("Failed to fetch channels: " + channelsResponse.getError());
             }
 
             log.info("ConversationsList returned {} conversations", channelsResponse.getChannels().size());
@@ -251,9 +257,11 @@ public class SlackService {
             log.info("Fetched {} total conversations", allChannels.size());
             return allChannels;
 
+        } catch (ResourceNotFoundException | BadRequestException | ServiceException e) {
+            throw e;
         } catch (IOException | SlackApiException e) {
             log.error("Error fetching Slack channels", e);
-            throw new RuntimeException("Failed to fetch channels: " + e.getMessage());
+            throw new ServiceException("Failed to fetch channels: " + e.getMessage(), e);
         }
     }
 
@@ -358,11 +366,11 @@ public class SlackService {
     @Transactional(readOnly = true)
     public void sendMessage(SendSlackMessageRequest request, User user) {
         if (user.getSlackWorkspaceId() == null) {
-            throw new RuntimeException("Slack integration not found");
+            throw new ResourceNotFoundException("Slack integration not found");
         }
 
         if (!Boolean.TRUE.equals(user.getSlackIsActive())) {
-            throw new RuntimeException("Slack integration is not active");
+            throw new BadRequestException("Slack integration is not active");
         }
 
         try {
@@ -393,15 +401,17 @@ public class SlackService {
                     );
 
             if (!response.isOk()) {
-                throw new RuntimeException("Failed to send message: " + response.getError());
+                throw new ServiceException("Failed to send message: " + response.getError());
             }
 
             log.info("Message sent to Slack channel {} for user {}",
                     request.getChannelId(), user.getId());
 
+        } catch (ResourceNotFoundException | BadRequestException | ServiceException e) {
+            throw e;
         } catch (IOException | SlackApiException e) {
             log.error("Error sending Slack message", e);
-            throw new RuntimeException("Failed to send message: " + e.getMessage());
+            throw new ServiceException("Failed to send message: " + e.getMessage(), e);
         }
     }
 
@@ -411,11 +421,11 @@ public class SlackService {
     @Transactional(readOnly = true)
     public List<SlackMessageResponse> getMessageHistory(String channelId, User user) {
         if (user.getSlackWorkspaceId() == null) {
-            throw new RuntimeException("Slack integration not found");
+            throw new ResourceNotFoundException("Slack integration not found");
         }
 
         if (!Boolean.TRUE.equals(user.getSlackIsActive())) {
-            throw new RuntimeException("Slack integration is not active");
+            throw new BadRequestException("Slack integration is not active");
         }
 
         try {
@@ -432,7 +442,7 @@ public class SlackService {
                     .limit(50));
 
             if (!response.isOk()) {
-                throw new RuntimeException("Failed to fetch message history: " + response.getError());
+                throw new ServiceException("Failed to fetch message history: " + response.getError());
             }
 
             log.info("Fetched {} messages from channel {}", response.getMessages().size(), channelId);
@@ -491,9 +501,11 @@ public class SlackService {
                     })
                     .collect(Collectors.toList());
 
+        } catch (ResourceNotFoundException | BadRequestException | ServiceException e) {
+            throw e;
         } catch (IOException | SlackApiException e) {
             log.error("Error fetching message history", e);
-            throw new RuntimeException("Failed to fetch message history: " + e.getMessage());
+            throw new ServiceException("Failed to fetch message history: " + e.getMessage(), e);
         }
     }
 }

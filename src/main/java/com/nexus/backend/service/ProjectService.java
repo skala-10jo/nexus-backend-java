@@ -6,6 +6,8 @@ import com.nexus.backend.dto.response.ScheduleResponse;
 import com.nexus.backend.entity.File;
 import com.nexus.backend.entity.Project;
 import com.nexus.backend.entity.User;
+import com.nexus.backend.exception.ResourceNotFoundException;
+import com.nexus.backend.exception.UnauthorizedException;
 import com.nexus.backend.repository.FileRepository;
 import com.nexus.backend.repository.GlossaryTermRepository;
 import com.nexus.backend.repository.ProjectRepository;
@@ -48,7 +50,7 @@ public class ProjectService {
     @Transactional(readOnly = true)
     public ProjectResponse getProject(UUID projectId, User user) {
         Project project = projectRepository.findByIdAndUserId(projectId, user.getId())
-                .orElseThrow(() -> new RuntimeException("Project not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Project", "id", projectId));
 
         ProjectResponse response = ProjectResponse.from(project);
         // Use project files approach to count terms (handles project_id = NULL case)
@@ -78,7 +80,7 @@ public class ProjectService {
             // Verify all files belong to the user
             for (File file : files) {
                 if (!file.getUser().getId().equals(user.getId())) {
-                    throw new RuntimeException("File does not belong to user");
+                    throw new UnauthorizedException("File does not belong to user");
                 }
                 // Add project to file (File is the owner)
                 if (!file.getProjects().contains(project)) {
@@ -90,8 +92,9 @@ public class ProjectService {
         }
 
         // Refresh project to get updated files list
-        project = projectRepository.findById(project.getId())
-                .orElseThrow(() -> new RuntimeException("Project not found after creation"));
+        UUID projectId = project.getId();
+        project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project", "id", projectId));
 
         log.info("Created project: {} for user: {} with {} files",
                 project.getId(), user.getId(), project.getFiles().size());
@@ -106,7 +109,7 @@ public class ProjectService {
     @Transactional
     public ProjectResponse updateProject(UUID projectId, ProjectRequest request, User user) {
         Project project = projectRepository.findByIdAndUserId(projectId, user.getId())
-                .orElseThrow(() -> new RuntimeException("Project not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Project", "id", projectId));
 
         project.setName(request.getName());
         project.setDescription(request.getDescription());
@@ -154,7 +157,7 @@ public class ProjectService {
                 for (File file : addedFiles) {
                     // Verify file belongs to user
                     if (!file.getUser().getId().equals(user.getId())) {
-                        throw new RuntimeException("File does not belong to user");
+                        throw new UnauthorizedException("File does not belong to user");
                     }
                     // Add project to file (File is the owner)
                     if (!file.getProjects().contains(project)) {
@@ -167,7 +170,7 @@ public class ProjectService {
 
         // Refresh project to get updated files list
         project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new RuntimeException("Project not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Project", "id", projectId));
 
         log.info("Updated project: {} with {} files",
                 project.getId(), project.getFiles().size());
@@ -182,7 +185,7 @@ public class ProjectService {
     @Transactional
     public void deleteProject(UUID projectId, User user) {
         Project project = projectRepository.findByIdAndUserId(projectId, user.getId())
-                .orElseThrow(() -> new RuntimeException("Project not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Project", "id", projectId));
 
         project.setStatus("DELETED");
         projectRepository.save(project);
@@ -193,7 +196,7 @@ public class ProjectService {
     public List<ScheduleResponse> getProjectSchedules(UUID projectId, User user) {
         // Verify project belongs to user
         projectRepository.findByIdAndUserId(projectId, user.getId())
-                .orElseThrow(() -> new RuntimeException("Project not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Project", "id", projectId));
 
         // Use scheduleRepository to fetch schedules with project information
         return scheduleRepository.findByProjectIdOrderByStartTimeAsc(projectId)

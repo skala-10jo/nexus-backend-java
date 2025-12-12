@@ -17,6 +17,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.nexus.backend.exception.BadRequestException;
+import com.nexus.backend.exception.ResourceNotFoundException;
+import com.nexus.backend.exception.ServiceException;
+
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.*;
@@ -69,10 +73,10 @@ public class CalendarSyncService {
     @Transactional
     public int syncUserCalendar(UUID userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
         if (user.getOutlookAccessToken() == null) {
-            throw new RuntimeException("Outlook 계정이 연동되지 않았습니다");
+            throw new BadRequestException("Outlook 계정이 연동되지 않았습니다");
         }
 
         try {
@@ -89,9 +93,11 @@ public class CalendarSyncService {
             log.info("Calendar sync completed for user: {}, synced {} events", userId, syncedCount);
             return syncedCount;
 
+        } catch (ResourceNotFoundException | BadRequestException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Failed to sync calendar for user: {}", userId, e);
-            throw new RuntimeException("캘린더 동기화 실패: " + e.getMessage());
+            throw new ServiceException("캘린더 동기화 실패: " + e.getMessage(), e);
         }
     }
 

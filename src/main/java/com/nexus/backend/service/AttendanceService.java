@@ -3,6 +3,8 @@ package com.nexus.backend.service;
 import com.nexus.backend.dto.response.AttendanceResponse;
 import com.nexus.backend.entity.User;
 import com.nexus.backend.entity.UserAttendance;
+import com.nexus.backend.exception.ConflictException;
+import com.nexus.backend.exception.ResourceNotFoundException;
 import com.nexus.backend.repository.UserAttendanceRepository;
 import com.nexus.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -28,13 +30,13 @@ public class AttendanceService {
     @Transactional
     public AttendanceResponse checkIn(UUID userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
         LocalDate today = LocalDate.now();
 
         // 이미 출석했는지 확인
         if (attendanceRepository.existsByUserIdAndAttendanceDate(userId, today)) {
-            throw new RuntimeException("Already checked in today");
+            throw new ConflictException("오늘 이미 출석했습니다");
         }
 
         UserAttendance attendance = UserAttendance.builder()

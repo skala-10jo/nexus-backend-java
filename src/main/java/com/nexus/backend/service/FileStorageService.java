@@ -1,5 +1,7 @@
 package com.nexus.backend.service;
 
+import com.nexus.backend.exception.ResourceNotFoundException;
+import com.nexus.backend.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -25,7 +27,7 @@ public class FileStorageService {
         try {
             Files.createDirectories(this.uploadPath);
         } catch (IOException ex) {
-            throw new RuntimeException("Could not create upload directory", ex);
+            throw new ServiceException("Could not create upload directory", ex);
         }
     }
 
@@ -53,7 +55,7 @@ public class FileStorageService {
             // Return relative path
             return dateFolder + "/" + storedFilename;
         } catch (IOException ex) {
-            throw new RuntimeException("Could not store file. Please try again!", ex);
+            throw new ServiceException("Could not store file. Please try again!", ex);
         }
     }
 
@@ -65,10 +67,12 @@ public class FileStorageService {
             if (resource.exists() && resource.isReadable()) {
                 return resource;
             } else {
-                throw new RuntimeException("File not found: " + filePath);
+                throw new ResourceNotFoundException("File not found: " + filePath);
             }
+        } catch (ResourceNotFoundException ex) {
+            throw ex;
         } catch (Exception ex) {
-            throw new RuntimeException("File not found: " + filePath, ex);
+            throw new ResourceNotFoundException("File not found: " + filePath);
         }
     }
 
@@ -77,7 +81,7 @@ public class FileStorageService {
             Path file = this.uploadPath.resolve(filePath).normalize();
             Files.deleteIfExists(file);
         } catch (IOException ex) {
-            throw new RuntimeException("Could not delete file: " + filePath, ex);
+            throw new ServiceException("Could not delete file: " + filePath, ex);
         }
     }
 

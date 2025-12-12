@@ -56,6 +56,18 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 리소스 충돌 (409)
+     * 이미 존재하는 리소스 생성 시도 등
+     */
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ApiResponse<Object>> handleConflictException(ConflictException ex) {
+        log.warn("Conflict: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    /**
      * 서비스 로직 오류 (500)
      */
     @ExceptionHandler(ServiceException.class)

@@ -3,6 +3,9 @@ package com.nexus.backend.service;
 import com.nexus.backend.dto.request.UpdateUserRequest;
 import com.nexus.backend.dto.response.UserResponse;
 import com.nexus.backend.entity.User;
+import com.nexus.backend.exception.BadRequestException;
+import com.nexus.backend.exception.ResourceNotFoundException;
+import com.nexus.backend.exception.UnauthorizedException;
 import com.nexus.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,7 +32,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserResponse getUserById(UUID id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
 
         return UserResponse.from(user);
     }
@@ -38,11 +41,11 @@ public class UserService {
     public UserResponse updateUser(UUID id, UpdateUserRequest request, User currentUser) {
         // Check if user can only update their own profile
         if (!currentUser.getId().equals(id)) {
-            throw new RuntimeException("You can only update your own profile");
+            throw new UnauthorizedException("You can only update your own profile");
         }
 
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
 
         // Update fields if provided
         if (request.getFullName() != null) {
@@ -83,22 +86,22 @@ public class UserService {
     public UserResponse uploadAvatar(UUID id, MultipartFile file, User currentUser) {
         // Check if user can only update their own avatar
         if (!currentUser.getId().equals(id)) {
-            throw new RuntimeException("You can only update your own avatar");
+            throw new UnauthorizedException("You can only update your own avatar");
         }
 
         // Validate file type
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase())) {
-            throw new RuntimeException("Invalid file type. Allowed types: PNG, JPG, JPEG, GIF, WEBP");
+            throw new BadRequestException("Invalid file type. Allowed types: PNG, JPG, JPEG, GIF, WEBP");
         }
 
         // Validate file size
         if (file.getSize() > MAX_AVATAR_SIZE) {
-            throw new RuntimeException("File size exceeds maximum limit of 5MB");
+            throw new BadRequestException("File size exceeds maximum limit of 5MB");
         }
 
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
 
         // Delete old avatar if exists and is a stored file (not external URL)
         String oldAvatarUrl = user.getAvatarUrl();
@@ -132,17 +135,17 @@ public class UserService {
     public UserResponse updatePreferredLanguage(UUID id, String language, User currentUser) {
         // Check if user can only update their own preference
         if (!currentUser.getId().equals(id)) {
-            throw new RuntimeException("You can only update your own preferences");
+            throw new UnauthorizedException("You can only update your own preferences");
         }
 
         // Validate language code
         List<String> validLanguages = Arrays.asList("ko", "en", "ja", "vi", "zh");
         if (language == null || !validLanguages.contains(language.toLowerCase())) {
-            throw new RuntimeException("Invalid language code. Allowed: ko, en, ja, vi, zh");
+            throw new BadRequestException("Invalid language code. Allowed: ko, en, ja, vi, zh");
         }
 
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", id));
 
         user.setPreferredLanguage(language.toLowerCase());
         user = userRepository.save(user);
