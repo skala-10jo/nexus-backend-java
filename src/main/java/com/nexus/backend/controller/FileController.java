@@ -26,14 +26,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.UUID;
 
-/**
- * REST controller for file operations using the new file structure.
- * Provides endpoints for document and video management.
- *
- * @author NEXUS Team
- * @version 1.0
- * @since 2025-01-18
- */
 @RestController
 @RequestMapping("/api/files")
 @RequiredArgsConstructor
@@ -54,8 +46,7 @@ public class FileController {
     @PostMapping("/documents")
     public ResponseEntity<ApiResponse<FileResponse>> uploadDocument(
             @RequestParam("file") MultipartFile file,
-            @AuthenticationPrincipal User user
-    ) {
+            @AuthenticationPrincipal User user) {
         log.info("Document upload request: user={}, filename={}", user.getUsername(), file.getOriginalFilename());
 
         FileResponse response = fileService.uploadDocument(file, user);
@@ -69,11 +60,11 @@ public class FileController {
      * Upload a video file.
      * POST /api/files/videos
      *
-     * @param file            the file to upload
-     * @param sourceLanguage  source language code
-     * @param targetLanguage  target language code
-     * @param documentIds     optional document IDs for context (comma-separated)
-     * @param principal       authenticated user
+     * @param file           the file to upload
+     * @param sourceLanguage source language code
+     * @param targetLanguage target language code
+     * @param documentIds    optional document IDs for context (comma-separated)
+     * @param principal      authenticated user
      * @return FileResponse
      */
     @PostMapping("/videos")
@@ -82,8 +73,7 @@ public class FileController {
             @RequestParam("sourceLanguage") String sourceLanguage,
             @RequestParam("targetLanguage") String targetLanguage,
             @RequestParam(value = "documentIds", required = false) String documentIds,
-            @AuthenticationPrincipal User user
-    ) {
+            @AuthenticationPrincipal User user) {
         log.info("Video upload request: user={}, filename={}", user.getUsername(), file.getOriginalFilename());
 
         VideoUploadRequest request = new VideoUploadRequest();
@@ -115,8 +105,7 @@ public class FileController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "uploadDate") String sortBy,
             @RequestParam(defaultValue = "desc") String sortOrder,
-            @AuthenticationPrincipal User user
-    ) {
+            @AuthenticationPrincipal User user) {
         Sort.Direction direction = sortOrder.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
 
@@ -142,8 +131,7 @@ public class FileController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "uploadDate") String sortBy,
             @RequestParam(defaultValue = "desc") String sortOrder,
-            @AuthenticationPrincipal User user
-    ) {
+            @AuthenticationPrincipal User user) {
         Sort.Direction direction = sortOrder.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
 
@@ -163,8 +151,7 @@ public class FileController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<FileDetailResponse>> getFileDetail(
             @PathVariable UUID id,
-            @AuthenticationPrincipal User user
-    ) {
+            @AuthenticationPrincipal User user) {
         FileDetailResponse response = fileService.getFileDetail(id, user.getId());
 
         return ResponseEntity.ok(ApiResponse.success("파일 상세 조회 완료", response));
@@ -181,8 +168,7 @@ public class FileController {
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteFile(
             @PathVariable UUID id,
-            @AuthenticationPrincipal User user
-    ) {
+            @AuthenticationPrincipal User user) {
         log.info("Delete file request: user={}, fileId={}", user.getUsername(), id);
 
         fileService.deleteFile(id, user.getId());
@@ -200,8 +186,7 @@ public class FileController {
     @GetMapping("/serve/**")
     public ResponseEntity<Resource> serveFile(
             @RequestParam(value = "path", required = false) String pathParam,
-            jakarta.servlet.http.HttpServletRequest request
-    ) {
+            jakarta.servlet.http.HttpServletRequest request) {
         // Extract path from URL (everything after /serve/)
         String fullPath = request.getRequestURI();
         String basePath = "/api/files/serve/";

@@ -12,9 +12,6 @@ import java.util.UUID;
 
 /**
  * UserExpression Repository
- *
- * @author NEXUS Team
- * @since 2025-01-21
  */
 @Repository
 public interface UserExpressionRepository extends JpaRepository<UserExpression, UUID> {

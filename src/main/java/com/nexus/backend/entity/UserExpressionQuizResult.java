@@ -12,9 +12,6 @@ import java.util.UUID;
 /**
  * UserExpressionQuizResult Entity
  * 사용자별 표현 퀴즈 결과 (예문별 정답/오답 횟수 추적)
- *
- * @author NEXUS Team
- * @since 2025-12-01
  */
 @Entity
 @Table(name = "user_expression_quiz_results")
@@ -37,7 +34,7 @@ public class UserExpressionQuizResult {
     private Expression expression;
 
     @Column(name = "example_index", nullable = false)
-    private Integer exampleIndex;  // expressions.examples JSONB 배열의 인덱스
+    private Integer exampleIndex; // expressions.examples JSONB 배열의 인덱스
 
     @Column(name = "correct_count", nullable = false)
     @Builder.Default

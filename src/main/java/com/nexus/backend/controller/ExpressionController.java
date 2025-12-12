@@ -19,12 +19,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * Expression Controller
- *
- * @author NEXUS Team
- * @since 2025-01-21
- */
 @Slf4j
 @RestController
 @RequestMapping("/api/expressions")

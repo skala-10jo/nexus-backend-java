@@ -17,9 +17,6 @@ import java.util.UUID;
  * Common file entity for all file types (documents, videos, audio).
  * This replaces the old 'Document' entity with clearer domain separation.
  *
- * @author NEXUS Team
- * @version 1.0
- * @since 2025-01-18
  */
 @Entity
 @Table(name = "files")
@@ -72,11 +69,7 @@ public class File {
 
     // Relationships
     @ManyToMany
-    @JoinTable(
-        name = "project_files",
-        joinColumns = @JoinColumn(name = "file_id"),
-        inverseJoinColumns = @JoinColumn(name = "project_id")
-    )
+    @JoinTable(name = "project_files", joinColumns = @JoinColumn(name = "file_id"), inverseJoinColumns = @JoinColumn(name = "project_id"))
     @Builder.Default
     private List<Project> projects = new ArrayList<>();
 

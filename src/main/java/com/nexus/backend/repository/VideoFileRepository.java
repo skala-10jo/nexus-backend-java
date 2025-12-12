@@ -13,10 +13,6 @@ import java.util.UUID;
 /**
  * Repository for VideoFile entity.
  * Provides queries for video-specific metadata and processing status.
- *
- * @author NEXUS Team
- * @version 1.0
- * @since 2025-01-18
  */
 @Repository
 public interface VideoFileRepository extends JpaRepository<VideoFile, UUID> {

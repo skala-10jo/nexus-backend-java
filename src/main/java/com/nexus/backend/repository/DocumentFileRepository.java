@@ -13,9 +13,6 @@ import java.util.UUID;
  * Repository for DocumentFile entity.
  * Provides queries for document-specific metadata.
  *
- * @author NEXUS Team
- * @version 1.0
- * @since 2025-01-18
  */
 @Repository
 public interface DocumentFileRepository extends JpaRepository<DocumentFile, UUID> {

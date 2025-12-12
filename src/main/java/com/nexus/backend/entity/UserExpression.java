@@ -11,18 +11,10 @@ import java.util.UUID;
 /**
  * UserExpression Entity
  * 사용자별 표현 학습 여부
- *
- * @author NEXUS Team
- * @since 2025-01-21
  */
 @Entity
-@Table(
-    name = "user_expressions",
-    uniqueConstraints = @UniqueConstraint(
-        name = "uk_user_expressions",
-        columnNames = {"user_id", "expression_id"}
-    )
-)
+@Table(name = "user_expressions", uniqueConstraints = @UniqueConstraint(name = "uk_user_expressions", columnNames = {
+        "user_id", "expression_id" }))
 @Data
 @Builder
 @NoArgsConstructor

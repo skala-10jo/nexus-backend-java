@@ -11,9 +11,6 @@ import java.util.UUID;
 
 /**
  * Expression Repository
- *
- * @author NEXUS Team
- * @since 2025-01-21
  */
 @Repository
 public interface ExpressionRepository extends JpaRepository<Expression, UUID> {
@@ -57,5 +54,6 @@ public interface ExpressionRepository extends JpaRepository<Expression, UUID> {
      * Unit + Chapter별 표현 목록 조회 (순서대로, 개수 제한)
      */
     @Query(value = "SELECT * FROM expressions WHERE unit = :unit AND chapter = :chapter ORDER BY expression LIMIT :limit", nativeQuery = true)
-    List<Expression> findByUnitAndChapterOrderByExpression(@Param("unit") String unit, @Param("chapter") String chapter, @Param("limit") int limit);
+    List<Expression> findByUnitAndChapterOrderByExpression(@Param("unit") String unit, @Param("chapter") String chapter,
+            @Param("limit") int limit);
 }

@@ -31,14 +31,11 @@ import java.nio.file.Files;
  * REST Controller for video file management.
  *
  * Endpoints:
- * - POST   /api/videos/upload     : Upload video file
- * - GET    /api/videos             : List user videos
- * - GET    /api/videos/{id}        : Get video details
- * - DELETE /api/videos/{id}        : Delete video
+ * - POST /api/videos/upload : Upload video file
+ * - GET /api/videos : List user videos
+ * - GET /api/videos/{id} : Get video details
+ * - DELETE /api/videos/{id} : Delete video
  *
- * @author NEXUS Team
- * @version 1.0
- * @since 2025-01-19
  */
 @RestController
 @RequestMapping("/api/videos")
@@ -63,8 +60,7 @@ public class VideoController {
     public ResponseEntity<ApiResponse<FileResponse>> uploadVideo(
             @RequestParam("file") MultipartFile file,
             @RequestParam("request") String requestJson,
-            @AuthenticationPrincipal User user
-    ) {
+            @AuthenticationPrincipal User user) {
         try {
             log.info("Video upload request: user={}, filename={}",
                     user.getUsername(), file.getOriginalFilename());
@@ -117,8 +113,7 @@ public class VideoController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "uploadDate") String sortBy,
             @RequestParam(defaultValue = "desc") String sortOrder,
-            @AuthenticationPrincipal User user
-    ) {
+            @AuthenticationPrincipal User user) {
         try {
             Sort sort = sortOrder.equalsIgnoreCase("asc")
                     ? Sort.by(sortBy).ascending()
@@ -150,8 +145,7 @@ public class VideoController {
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteVideo(
             @PathVariable java.util.UUID id,
-            @AuthenticationPrincipal User user
-    ) {
+            @AuthenticationPrincipal User user) {
         try {
             log.info("Video delete request: user={}, videoId={}", user.getUsername(), id);
 
@@ -179,8 +173,7 @@ public class VideoController {
     @GetMapping("/{id}/stream")
     public ResponseEntity<Resource> streamVideo(
             @PathVariable java.util.UUID id,
-            @AuthenticationPrincipal User user
-    ) {
+            @AuthenticationPrincipal User user) {
         try {
             log.info("Video stream request: user={}, videoId={}", user.getUsername(), id);
 

@@ -4,9 +4,6 @@ package com.nexus.backend.entity;
  * File type enumeration for the new file structure.
  * Provides explicit type identification replacing MIME type checking.
  *
- * @author NEXUS Team
- * @version 1.0
- * @since 2025-01-18
  */
 public enum FileType {
     /**
