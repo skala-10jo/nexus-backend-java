@@ -31,9 +31,6 @@ import java.util.stream.Collectors;
  * - File retrieval and deletion
  * - Subtitle information for videos
  *
- * @author NEXUS Team
- * @version 2.1
- * @since 2025-01-18
  */
 @Service
 @RequiredArgsConstructor

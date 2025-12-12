@@ -1,6 +1,4 @@
 -- V13: Add video translation tables
--- Author: NEXUS Team
--- Date: 2025-01-17
 --
 -- 영상 번역 시스템을 위한 테이블 추가
 -- - video_documents: 영상 파일 메타데이터 (documents 테이블 확장)

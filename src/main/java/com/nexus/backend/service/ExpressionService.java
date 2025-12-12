@@ -30,9 +30,7 @@ import java.util.stream.Collectors;
 
 /**
  * Expression Service
- *
- * @author NEXUS Team
- * @since 2025-01-21
+
  */
 @Slf4j
 @Service

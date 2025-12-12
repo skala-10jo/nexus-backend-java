@@ -12,10 +12,6 @@ import java.util.UUID;
 /**
  * Response DTO for File entity.
  * Used for list views and basic file information.
- *
- * @author NEXUS Team
- * @version 1.1
- * @since 2025-01-18
  */
 @Data
 @Builder
