@@ -27,6 +27,7 @@ import java.util.function.Consumer;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional(readOnly = true)
 public class OutlookAuthService {
 
     private final UserRepository userRepository;
