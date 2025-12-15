@@ -18,4 +18,14 @@ public interface ProjectRepository extends JpaRepository<Project, UUID> {
     Optional<Project> findByIdAndUserId(UUID id, UUID userId);
 
     boolean existsByIdAndUserId(UUID id, UUID userId);
+
+    /**
+     * Find project by user ID and name (for sync with ScheduleCategory)
+     */
+    Optional<Project> findByUserIdAndName(UUID userId, String name);
+
+    /**
+     * Check if project with name exists for user (for sync with ScheduleCategory)
+     */
+    boolean existsByUserIdAndName(UUID userId, String name);
 }

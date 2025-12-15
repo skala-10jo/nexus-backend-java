@@ -54,4 +54,17 @@ public interface ScheduleCategoryRepository extends JpaRepository<ScheduleCatego
     Optional<ScheduleCategory> findByUserIdAndName(UUID userId, String name);
 
     List<ScheduleCategory> findByUserIdAndIsFromOutlookTrue(UUID userId);
+
+    /**
+     * Find all Outlook category IDs for a user
+     */
+    @Query("SELECT sc.outlookCategoryId FROM ScheduleCategory sc WHERE sc.user.id = :userId AND sc.outlookCategoryId IS NOT NULL")
+    List<String> findOutlookCategoryIdsByUserId(@Param("userId") UUID userId);
+
+    /**
+     * Delete categories by Outlook category IDs (for sync cleanup)
+     */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM ScheduleCategory sc WHERE sc.outlookCategoryId IN :outlookCategoryIds AND sc.user.id = :userId")
+    void deleteByOutlookCategoryIdsAndUserId(@Param("outlookCategoryIds") List<String> outlookCategoryIds, @Param("userId") UUID userId);
 }

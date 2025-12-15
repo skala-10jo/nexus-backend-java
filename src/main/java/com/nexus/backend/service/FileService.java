@@ -17,6 +17,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.springframework.core.io.Resource;
+
+import java.io.IOException;
+import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -455,5 +459,80 @@ public class FileService {
         }
 
         return response;
+    }
+
+    // ==================== Video Streaming Methods ====================
+
+    /**
+     * Video stream result containing resource and content type.
+     */
+    public record VideoStreamResult(Resource resource, String contentType, String filename) {}
+
+    /**
+     * Get video file as streamable resource.
+     *
+     * @param videoId video file ID
+     * @param userId  user ID for authorization
+     * @return VideoStreamResult containing resource and content type
+     * @throws ResourceNotFoundException if video not found
+     * @throws ServiceException if user not authorized or streaming fails
+     */
+    public VideoStreamResult getVideoStreamResource(UUID videoId, UUID userId) {
+        log.debug("Getting video stream resource: videoId={}, userId={}", videoId, userId);
+
+        // Find video file with file info
+        VideoFile videoFile = videoFileRepository.findByIdWithFile(videoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Video", "id", videoId));
+
+        // Security check: verify user owns this video
+        if (!videoFile.getFile().getUser().getId().equals(userId)) {
+            log.warn("Unauthorized video stream attempt: userId={}, videoId={}", userId, videoId);
+            throw new ServiceException("이 영상에 대한 접근 권한이 없습니다");
+        }
+
+        try {
+            // Load video file as resource
+            String filePath = videoFile.getFile().getFilePath();
+            Resource resource = fileStorageService.loadFileAsResource(filePath);
+
+            // Determine content type
+            String contentType = videoFile.getFile().getMimeType();
+            if (contentType == null) {
+                try {
+                    contentType = Files.probeContentType(fileStorageService.getFilePath(filePath));
+                } catch (IOException e) {
+                    contentType = "video/mp4";
+                }
+            }
+
+            String filename = videoFile.getFile().getOriginalFilename();
+
+            log.debug("Video stream prepared: path={}, contentType={}", filePath, contentType);
+
+            return new VideoStreamResult(resource, contentType, filename);
+
+        } catch (ResourceNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Failed to prepare video stream: videoId={}, error={}", videoId, e.getMessage(), e);
+            throw new ServiceException("영상 스트리밍 준비 실패: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Validate video file for upload.
+     *
+     * @param file MultipartFile to validate
+     * @throws ServiceException if validation fails
+     */
+    public void validateVideoFile(MultipartFile file) {
+        if (file.isEmpty()) {
+            throw new ServiceException("영상 파일이 비어있습니다");
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("video/")) {
+            throw new ServiceException("영상 파일만 업로드 가능합니다");
+        }
     }
 }

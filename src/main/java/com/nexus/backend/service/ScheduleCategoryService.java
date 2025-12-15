@@ -5,6 +5,7 @@ import com.nexus.backend.dto.request.CategoryRequest;
 import com.nexus.backend.dto.response.ScheduleCategoryResponse;
 import com.nexus.backend.entity.ScheduleCategory;
 import com.nexus.backend.entity.User;
+import com.nexus.backend.exception.ResourceNotFoundException;
 import com.nexus.backend.repository.ScheduleCategoryRepository;
 import com.nexus.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class ScheduleCategoryService {
 
     private final ScheduleCategoryRepository categoryRepository;
     private final UserRepository userRepository;
+    private final ProjectCategorySyncService syncService;
 
     /**
      * Get all categories for a user
@@ -60,6 +62,10 @@ public class ScheduleCategoryService {
                 .build();
 
         ScheduleCategory saved = categoryRepository.save(category);
+
+        // 프로젝트 동기화: 카테고리 생성 시 동일 이름의 프로젝트 자동 생성
+        syncService.onCategoryCreated(userId, request.getName());
+
         return toResponse(saved);
     }
 
@@ -69,7 +75,10 @@ public class ScheduleCategoryService {
     @Transactional
     public ScheduleCategoryResponse updateCategory(UUID userId, UUID categoryId, CategoryRequest request) {
         ScheduleCategory category = categoryRepository.findByIdAndUserId(categoryId, userId)
-                .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Category", "id", categoryId));
+
+        // 이름 변경 시 프로젝트 동기화를 위해 이전 이름 저장
+        String oldName = category.getName();
 
         // Check for duplicate name (excluding current category)
         if (!category.getName().equals(request.getName()) &&
@@ -88,6 +97,10 @@ public class ScheduleCategoryService {
         category.setDescription(request.getDescription());
 
         ScheduleCategory updated = categoryRepository.save(category);
+
+        // 프로젝트 동기화: 카테고리 이름 변경 시 동일 이름의 프로젝트 이름 변경
+        syncService.onCategoryUpdated(userId, oldName, request.getName());
+
         return toResponse(updated);
     }
 
@@ -97,16 +110,23 @@ public class ScheduleCategoryService {
     @Transactional
     public void deleteCategory(UUID userId, UUID categoryId) {
         ScheduleCategory category = categoryRepository.findByIdAndUserId(categoryId, userId)
-                .orElseThrow(() -> new IllegalArgumentException("Category not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Category", "id", categoryId));
 
         // Cannot delete default categories
         if (category.getIsDefault()) {
             throw new IllegalArgumentException("Cannot delete default category");
         }
 
+        // 프로젝트 동기화를 위해 카테고리 정보 저장
+        String categoryName = category.getName();
+        boolean isFromOutlook = Boolean.TRUE.equals(category.getIsFromOutlook());
+
         // Note: Associated schedules will be handled via cascade in junction table
         // Schedules themselves won't be deleted, just the category association
         categoryRepository.delete(category);
+
+        // 프로젝트 동기화: 카테고리 삭제 시 동일 이름의 프로젝트 삭제
+        syncService.onCategoryDeleted(userId, categoryName, isFromOutlook);
     }
 
     /**
