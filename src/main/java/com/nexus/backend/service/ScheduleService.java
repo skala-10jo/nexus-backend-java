@@ -101,6 +101,13 @@ public class ScheduleService {
             }
         }
 
+        // Auto-link project by category name if project is not explicitly provided
+        // This ensures schedule is linked to project when category with same name exists
+        if (project == null && !categories.isEmpty()) {
+            String categoryName = categories.get(0).getName();
+            project = projectRepository.findByUserIdAndName(userId, categoryName).orElse(null);
+        }
+
         Schedule schedule = Schedule.builder()
                 .user(user)
                 .title(request.getTitle())
@@ -129,22 +136,20 @@ public class ScheduleService {
         }
 
         // Update project if provided
+        Project project = null;
         if (request.getProjectId() != null) {
-            Project project = projectRepository.findById(request.getProjectId())
+            project = projectRepository.findById(request.getProjectId())
                     .orElseThrow(() -> new ResourceNotFoundException("Project", "id", request.getProjectId()));
 
             // Verify project belongs to user
             if (!project.getUser().getId().equals(userId)) {
                 throw new UnauthorizedException("Unauthorized access to project");
             }
-            schedule.setProject(project);
-        } else {
-            schedule.setProject(null);
         }
 
         // Update categories if provided
+        List<ScheduleCategory> categories = new ArrayList<>();
         if (request.getCategoryIds() != null) {
-            List<ScheduleCategory> categories = new ArrayList<>();
             for (UUID categoryId : request.getCategoryIds()) {
                 ScheduleCategory category = categoryRepository.findByIdAndUserId(categoryId, userId)
                         .orElseThrow(() -> new ResourceNotFoundException("ScheduleCategory", "id", categoryId));
@@ -152,6 +157,14 @@ public class ScheduleService {
             }
             schedule.setCategories(categories);
         }
+
+        // Auto-link project by category name if project is not explicitly provided
+        // This ensures schedule is linked to project when category with same name exists
+        if (project == null && !categories.isEmpty()) {
+            String categoryName = categories.get(0).getName();
+            project = projectRepository.findByUserIdAndName(userId, categoryName).orElse(null);
+        }
+        schedule.setProject(project);
 
         schedule.setTitle(request.getTitle());
         schedule.setDescription(request.getDescription());
