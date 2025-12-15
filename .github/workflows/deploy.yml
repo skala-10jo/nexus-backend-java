@@ -1,0 +1,96 @@
+name: Java Backend CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # 수동 트리거
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.create-tag.outputs.tag }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'maven'
+
+      - name: Create image tag
+        id: create-tag
+        run: |
+          GIT_HASH=$(git rev-parse --short HEAD)
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          TAG="${GIT_HASH}-${TIMESTAMP}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        env:
+          IMAGE_NAME: nexus-backend-java
+        run: |
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/${IMAGE_NAME}:${{ steps.create-tag.outputs.tag }} \
+                       -t ${{ secrets.DOCKERHUB_USERNAME }}/${IMAGE_NAME}:latest .
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/${IMAGE_NAME}:${{ steps.create-tag.outputs.tag }}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/${IMAGE_NAME}:latest
+
+  deploy:
+    needs: build_and_push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to Server via Bastion
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.TARGET_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          proxy_host: ${{ secrets.BASTION_HOST }}
+          proxy_username: ubuntu
+          proxy_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            IMAGE_NAME="nexus-backend-java"
+
+            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+
+            # Stop and remove existing container
+            docker stop $IMAGE_NAME || true
+            docker rm $IMAGE_NAME || true
+
+            # Pull latest image
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:latest
+
+            # Run new container
+            docker run -d \
+              --restart always \
+              -p 3000:3000 \
+              --name $IMAGE_NAME \
+              -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+              -e DATABASE_USERNAME="${{ secrets.DATABASE_USERNAME }}" \
+              -e DATABASE_PASSWORD="${{ secrets.DATABASE_PASSWORD }}" \
+              -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+              -e JWT_EXPIRATION="${{ secrets.JWT_EXPIRATION }}" \
+              -e PYTHON_BACKEND_URL="${{ secrets.PYTHON_BACKEND_URL }}" \
+              -e CORS_ALLOWED_ORIGINS="${{ secrets.CORS_ALLOWED_ORIGINS }}" \
+              -e SPRING_PROFILES_ACTIVE=prod \
+              -e SLACK_CLIENT_ID="${{ secrets.SLACK_CLIENT_ID }}" \
+              -e SLACK_CLIENT_SECRET="${{ secrets.SLACK_CLIENT_SECRET }}" \
+              -e SLACK_REDIRECT_URI="${{ secrets.SLACK_REDIRECT_URI }}" \
+              ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:latest
+
+            # Cleanup old images
+            docker image prune -af
+
+            echo "✅ Java Backend deployed successfully!"
