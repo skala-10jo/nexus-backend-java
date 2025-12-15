@@ -31,6 +31,7 @@ public class ProjectService {
     private final FileRepository fileRepository;
     private final ScheduleRepository scheduleRepository;
     private final GlossaryTermRepository glossaryTermRepository;
+    private final ProjectCategorySyncService syncService;
 
     @Transactional(readOnly = true)
     public List<ProjectResponse> getUserProjects(User user) {
@@ -99,6 +100,9 @@ public class ProjectService {
         log.info("Created project: {} for user: {} with {} files",
                 project.getId(), user.getId(), project.getFiles().size());
 
+        // 카테고리 동기화: 프로젝트 생성 시 동일 이름의 카테고리 자동 생성
+        syncService.onProjectCreated(user.getId(), request.getName());
+
         ProjectResponse response = ProjectResponse.from(project);
         // Use project files approach to count terms (handles project_id = NULL case)
         long actualTermCount = glossaryTermRepository.countTermsByProjectFiles(project.getId());
@@ -110,6 +114,9 @@ public class ProjectService {
     public ProjectResponse updateProject(UUID projectId, ProjectRequest request, User user) {
         Project project = projectRepository.findByIdAndUserId(projectId, user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Project", "id", projectId));
+
+        // 이름 변경 시 카테고리 동기화를 위해 이전 이름 저장
+        String oldName = project.getName();
 
         project.setName(request.getName());
         project.setDescription(request.getDescription());
@@ -175,6 +182,9 @@ public class ProjectService {
         log.info("Updated project: {} with {} files",
                 project.getId(), project.getFiles().size());
 
+        // 카테고리 동기화: 프로젝트 이름 변경 시 동일 이름의 카테고리 이름 변경
+        syncService.onProjectUpdated(user.getId(), oldName, request.getName());
+
         ProjectResponse response = ProjectResponse.from(project);
         // Use project files approach to count terms (handles project_id = NULL case)
         long actualTermCount = glossaryTermRepository.countTermsByProjectFiles(project.getId());
@@ -187,9 +197,15 @@ public class ProjectService {
         Project project = projectRepository.findByIdAndUserId(projectId, user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Project", "id", projectId));
 
+        // 카테고리 동기화를 위해 프로젝트 이름 저장
+        String projectName = project.getName();
+
         project.setStatus("DELETED");
         projectRepository.save(project);
         log.info("Deleted project: {}", projectId);
+
+        // 카테고리 동기화: 프로젝트 삭제 시 동일 이름의 카테고리 삭제
+        syncService.onProjectDeleted(user.getId(), projectName);
     }
 
     @Transactional(readOnly = true)
