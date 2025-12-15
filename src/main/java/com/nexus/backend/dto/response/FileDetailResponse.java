@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -35,6 +36,9 @@ public class FileDetailResponse {
 
     // Document-specific fields (populated only for DOCUMENT type)
     private DocumentFileDetail documentDetail;
+
+    // Document content (text extracted from document pages)
+    private List<ContentPageDto> contents;
 
     // Video-specific fields (populated only for VIDEO type)
     private VideoFileDetail videoDetail;

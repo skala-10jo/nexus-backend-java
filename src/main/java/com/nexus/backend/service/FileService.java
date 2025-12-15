@@ -1,6 +1,7 @@
 package com.nexus.backend.service;
 
 import com.nexus.backend.dto.request.VideoUploadRequest;
+import com.nexus.backend.dto.response.ContentPageDto;
 import com.nexus.backend.dto.response.FileDetailResponse;
 import com.nexus.backend.dto.response.FileResponse;
 import com.nexus.backend.entity.*;
@@ -424,6 +425,16 @@ public class FileService {
                     .characterCount(df.getCharacterCount())
                     .isAnalyzed(df.getIsAnalyzed())
                     .build());
+
+            // Fetch document contents (text extracted from pages)
+            List<DocumentContent> documentContents = documentContentRepository.findByFileIdOrderByPageNumber(file.getId());
+            List<ContentPageDto> contents = documentContents.stream()
+                    .map(dc -> ContentPageDto.builder()
+                            .pageNumber(dc.getPageNumber())
+                            .contentText(dc.getContentText())
+                            .build())
+                    .toList();
+            response.setContents(contents);
         } else if (file.getFileType() == FileType.VIDEO && file.getVideoFile() != null) {
             VideoFile vf = file.getVideoFile();
             response.setVideoDetail(FileDetailResponse.VideoFileDetail.builder()
