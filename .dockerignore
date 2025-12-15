@@ -1,0 +1,45 @@
+# 빌드 결과물 (Docker 내부에서 빌드)
+target/
+
+# 개발 파일
+.git
+.gitignore
+*.md
+README.md
+
+# IDE
+.vscode
+.idea
+*.iml
+*.swp
+*.swo
+
+# 환경변수 파일 (런타임에 주입)
+.env
+.env.local
+.env.*
+
+# 로그
+*.log
+logs/
+
+# 테스트 결과
+test-results/
+coverage/
+
+# 로컬 업로드 파일
+uploads/
+
+# Maven 래퍼 (Docker에서 Maven 직접 설치)
+.mvn/
+mvnw
+mvnw.cmd
+
+# Docker 파일
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# 기타
+*.bak
+*.tmp
