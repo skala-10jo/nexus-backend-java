@@ -70,9 +70,10 @@ public class CalendarSyncService {
     /**
      * 사용자의 Outlook 일정 동기화
      * 단방향: Outlook → 로컬 DB
+     * @return Map with syncedCount, updatedCount, deletedCount
      */
     @Transactional
-    public int syncUserCalendar(UUID userId) {
+    public Map<String, Integer> syncUserCalendar(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
@@ -89,10 +90,11 @@ public class CalendarSyncService {
             syncCategories(graphClient, user);
 
             // 2. 일정 동기화
-            int syncedCount = syncEvents(graphClient, user);
+            Map<String, Integer> result = syncEvents(graphClient, user);
 
-            log.info("Calendar sync completed for user: {}, synced {} events", userId, syncedCount);
-            return syncedCount;
+            log.info("Calendar sync completed for user: {}, created={}, updated={}, deleted={}",
+                    userId, result.get("syncedCount"), result.get("updatedCount"), result.get("deletedCount"));
+            return result;
 
         } catch (ResourceNotFoundException | BadRequestException e) {
             throw e;
@@ -116,8 +118,19 @@ public class CalendarSyncService {
 
             if (categoriesResponse == null || categoriesResponse.getValue() == null) {
                 log.info("No categories found for user: {}", user.getId());
+                // Outlook에 카테고리가 없으면 모든 Outlook 연동 카테고리 삭제
+                detectAndDeleteRemovedCategories(user.getId(), new HashSet<>());
                 return;
             }
+
+            // Outlook 범주 ID 수집 (삭제 감지용)
+            Set<String> allOutlookCategoryIds = new HashSet<>();
+            for (OutlookCategory outlookCategory : categoriesResponse.getValue()) {
+                allOutlookCategoryIds.add(outlookCategory.getId());
+            }
+
+            // 삭제된 범주 감지 및 제거
+            detectAndDeleteRemovedCategories(user.getId(), allOutlookCategoryIds);
 
             int syncedCount = 0;
             for (OutlookCategory outlookCategory : categoriesResponse.getValue()) {
@@ -169,9 +182,32 @@ public class CalendarSyncService {
     }
 
     /**
-     * Outlook 일정 동기화
+     * Outlook에서 삭제된 범주를 DB에서도 제거
      */
-    private int syncEvents(GraphServiceClient graphClient, User user) {
+    private void detectAndDeleteRemovedCategories(UUID userId, Set<String> outlookCategoryIds) {
+        try {
+            List<String> dbCategoryIds = scheduleCategoryRepository.findOutlookCategoryIdsByUserId(userId);
+
+            List<String> categoryIdsToDelete = dbCategoryIds.stream()
+                    .filter(id -> id != null && !outlookCategoryIds.contains(id))
+                    .collect(Collectors.toList());
+
+            if (!categoryIdsToDelete.isEmpty()) {
+                log.info("Deleting {} categories removed from Outlook for user: {}",
+                        categoryIdsToDelete.size(), userId);
+                scheduleCategoryRepository.deleteByOutlookCategoryIdsAndUserId(categoryIdsToDelete, userId);
+            }
+
+        } catch (Exception e) {
+            log.error("Failed to detect and delete removed categories for user: {}", userId, e);
+        }
+    }
+
+    /**
+     * Outlook 일정 동기화
+     * @return Map with syncedCount, updatedCount, deletedCount
+     */
+    private Map<String, Integer> syncEvents(GraphServiceClient graphClient, User user) {
         try {
             // 현재 시간 기준 과거 1개월 ~ 미래 6개월 범위로 조회
             OffsetDateTime now = OffsetDateTime.now();
@@ -199,7 +235,9 @@ public class CalendarSyncService {
 
             if (eventsResponse == null || eventsResponse.getValue() == null) {
                 log.info("No events found for user: {}", user.getId());
-                return 0;
+                // 일정이 없으면 모든 Outlook 일정 삭제
+                int deletedCount = detectAndDeleteRemovedEvents(user.getId(), new HashSet<>());
+                return Map.of("syncedCount", 0, "updatedCount", 0, "deletedCount", deletedCount);
             }
 
             // Outlook 이벤트 ID 수집
@@ -210,7 +248,7 @@ public class CalendarSyncService {
             log.info("Found {} events in Outlook for user: {}", allOutlookEventIds.size(), user.getId());
 
             // 삭제된 일정 감지 및 제거
-            detectAndDeleteRemovedEvents(user.getId(), allOutlookEventIds);
+            int deletedCount = detectAndDeleteRemovedEvents(user.getId(), allOutlookEventIds);
 
             // 범주 캐싱 (일정별로 매번 조회하지 않도록)
             Map<String, ScheduleCategory> categoryCache = scheduleCategoryRepository
@@ -240,11 +278,13 @@ public class CalendarSyncService {
                         .findByOutlookEventIdAndUserId(event.getId(), user.getId());
 
                 if (existingSchedule.isPresent()) {
-                    // 기존 일정 업데이트
+                    // 기존 일정 업데이트 (실제 변경이 있을 때만 카운트)
                     Schedule schedule = existingSchedule.get();
-                    updateScheduleFromEvent(schedule, event, categoryCache, projectCache);
-                    scheduleRepository.save(schedule);
-                    updatedCount++;
+                    boolean hasChanges = updateScheduleFromEvent(schedule, event, categoryCache, projectCache);
+                    if (hasChanges) {
+                        scheduleRepository.save(schedule);
+                        updatedCount++;
+                    }
                 } else {
                     // 새 일정 생성
                     Schedule newSchedule = convertEventToSchedule(event, user, categoryCache, projectCache);
@@ -253,10 +293,10 @@ public class CalendarSyncService {
                 }
             }
 
-            log.info("Synced {} new events, updated {} events for user: {}",
-                    syncedCount, updatedCount, user.getId());
+            log.info("Synced {} new events, updated {} events, deleted {} events for user: {}",
+                    syncedCount, updatedCount, deletedCount, user.getId());
 
-            return syncedCount;
+            return Map.of("syncedCount", syncedCount, "updatedCount", updatedCount, "deletedCount", deletedCount);
 
         } catch (Exception e) {
             log.error("Failed to sync events for user: {}", user.getId(), e);
@@ -266,8 +306,9 @@ public class CalendarSyncService {
 
     /**
      * Outlook에서 삭제된 일정을 DB에서도 제거
+     * @return 삭제된 일정 개수
      */
-    private void detectAndDeleteRemovedEvents(UUID userId, Set<String> outlookEventIds) {
+    private int detectAndDeleteRemovedEvents(UUID userId, Set<String> outlookEventIds) {
         try {
             List<String> dbEventIds = scheduleRepository.findOutlookEventIdsByUserId(userId);
 
@@ -279,10 +320,13 @@ public class CalendarSyncService {
                 log.info("Deleting {} events removed from Outlook for user: {}",
                         eventIdsToDelete.size(), userId);
                 scheduleRepository.deleteByOutlookEventIdsAndUserId(eventIdsToDelete, userId);
+                return eventIdsToDelete.size();
             }
 
+            return 0;
         } catch (Exception e) {
             log.error("Failed to detect and delete removed events for user: {}", userId, e);
+            return 0;
         }
     }
 
@@ -307,44 +351,72 @@ public class CalendarSyncService {
 
     /**
      * Event 정보로 Schedule 업데이트
+     * @return 실제 변경이 있었으면 true, 없으면 false
      */
-    private void updateScheduleFromEvent(Schedule schedule, Event event,
+    private boolean updateScheduleFromEvent(Schedule schedule, Event event,
                                          Map<String, ScheduleCategory> categoryCache,
                                          Map<String, Project> projectCache) {
-        schedule.setTitle(event.getSubject() != null ? event.getSubject() : "(제목 없음)");
+        boolean hasChanges = false;
+
+        // 제목 비교 및 업데이트
+        String newTitle = event.getSubject() != null ? event.getSubject() : "(제목 없음)";
+        if (!Objects.equals(schedule.getTitle(), newTitle)) {
+            schedule.setTitle(newTitle);
+            hasChanges = true;
+        }
 
         // 본문 (HTML -> 순수 텍스트로 변환)
         if (event.getBody() != null && event.getBody().getContent() != null) {
             String content = event.getBody().getContent();
-            // HTML 태그 제거 및 정리
             String plainText = stripHtmlTags(content);
-            schedule.setDescription(plainText);
+            if (!Objects.equals(schedule.getDescription(), plainText)) {
+                schedule.setDescription(plainText);
+                hasChanges = true;
+            }
         }
 
-        // 시작/종료 시간
+        // 시작 시간
         if (event.getStart() != null && event.getStart().getDateTime() != null) {
             String timeZone = event.getStart().getTimeZone();
             ZoneId zoneId = timeZone != null ? ZoneId.of(timeZone) : ZoneId.of("UTC");
             OffsetDateTime startOdt = OffsetDateTime.parse(event.getStart().getDateTime() + "Z")
                     .atZoneSameInstant(zoneId)
                     .toOffsetDateTime();
-            schedule.setStartTime(startOdt.toInstant());
+            java.time.Instant newStartTime = startOdt.toInstant();
+            if (!Objects.equals(schedule.getStartTime(), newStartTime)) {
+                schedule.setStartTime(newStartTime);
+                hasChanges = true;
+            }
         }
 
+        // 종료 시간
         if (event.getEnd() != null && event.getEnd().getDateTime() != null) {
             String timeZone = event.getEnd().getTimeZone();
             ZoneId zoneId = timeZone != null ? ZoneId.of(timeZone) : ZoneId.of("UTC");
             OffsetDateTime endOdt = OffsetDateTime.parse(event.getEnd().getDateTime() + "Z")
                     .atZoneSameInstant(zoneId)
                     .toOffsetDateTime();
-            schedule.setEndTime(endOdt.toInstant());
+            java.time.Instant newEndTime = endOdt.toInstant();
+            if (!Objects.equals(schedule.getEndTime(), newEndTime)) {
+                schedule.setEndTime(newEndTime);
+                hasChanges = true;
+            }
         }
 
-        schedule.setAllDay(event.getIsAllDay() != null ? event.getIsAllDay() : false);
+        // 종일 여부
+        Boolean newAllDay = event.getIsAllDay() != null ? event.getIsAllDay() : false;
+        if (!Objects.equals(schedule.getAllDay(), newAllDay)) {
+            schedule.setAllDay(newAllDay);
+            hasChanges = true;
+        }
 
         // 장소
         if (event.getLocation() != null) {
-            schedule.setLocation(event.getLocation().getDisplayName());
+            String newLocation = event.getLocation().getDisplayName();
+            if (!Objects.equals(schedule.getLocation(), newLocation)) {
+                schedule.setLocation(newLocation);
+                hasChanges = true;
+            }
         }
 
         // 주최자
@@ -353,7 +425,10 @@ public class CalendarSyncService {
             if (organizer == null) {
                 organizer = event.getOrganizer().getEmailAddress().getAddress();
             }
-            schedule.setOrganizer(organizer);
+            if (!Objects.equals(schedule.getOrganizer(), organizer)) {
+                schedule.setOrganizer(organizer);
+                hasChanges = true;
+            }
         }
 
         // 참석자
@@ -365,7 +440,10 @@ public class CalendarSyncService {
                         return name != null ? name : a.getEmailAddress().getAddress();
                     })
                     .collect(Collectors.joining(", "));
-            schedule.setAttendees(attendees);
+            if (!Objects.equals(schedule.getAttendees(), attendees)) {
+                schedule.setAttendees(attendees);
+                hasChanges = true;
+            }
         }
 
         // 범주 연결 및 프로젝트 자동 매칭
@@ -389,25 +467,47 @@ public class CalendarSyncService {
                     Project project = projectCache.get(categoryName);
                     if (project != null) {
                         matchedProject = project;
-                        log.info("Auto-matched category '{}' to project '{}'", categoryName, project.getName());
+                        log.debug("Auto-matched category '{}' to project '{}'", categoryName, project.getName());
                     }
                 }
             }
 
-            schedule.setCategories(categories);
+            // 카테고리 변경 감지 (ID 목록 비교)
+            Set<UUID> oldCategoryIds = schedule.getCategories() != null
+                    ? schedule.getCategories().stream().map(ScheduleCategory::getId).collect(Collectors.toSet())
+                    : new HashSet<>();
+            Set<UUID> newCategoryIds = categories.stream().map(ScheduleCategory::getId).collect(Collectors.toSet());
+            if (!oldCategoryIds.equals(newCategoryIds)) {
+                schedule.setCategories(categories);
+                hasChanges = true;
+            }
 
-            // 프로젝트 설정 (매칭된 프로젝트가 없으면 null로 설정)
-            schedule.setProject(matchedProject);
+            // 프로젝트 변경 감지
+            UUID oldProjectId = schedule.getProject() != null ? schedule.getProject().getId() : null;
+            UUID newProjectId = matchedProject != null ? matchedProject.getId() : null;
+            if (!Objects.equals(oldProjectId, newProjectId)) {
+                schedule.setProject(matchedProject);
+                hasChanges = true;
+            }
 
-            // 첫 번째 범주의 색상을 일정 색상으로 사용
-            if (firstCategoryColor != null) {
+            // 색상 변경 감지
+            if (firstCategoryColor != null && !Objects.equals(schedule.getColor(), firstCategoryColor)) {
                 schedule.setColor(firstCategoryColor);
+                hasChanges = true;
             }
         } else {
-            // 카테고리가 없으면 프로젝트와 카테고리 모두 초기화
-            schedule.setCategories(new ArrayList<>());
-            schedule.setProject(null);
+            // 카테고리가 없는 경우
+            if (schedule.getCategories() != null && !schedule.getCategories().isEmpty()) {
+                schedule.setCategories(new ArrayList<>());
+                hasChanges = true;
+            }
+            if (schedule.getProject() != null) {
+                schedule.setProject(null);
+                hasChanges = true;
+            }
         }
+
+        return hasChanges;
     }
 
     /**

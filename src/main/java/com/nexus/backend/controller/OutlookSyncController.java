@@ -48,16 +48,43 @@ public class OutlookSyncController {
             @AuthenticationPrincipal User user
     ) {
         try {
-            int syncedCount = calendarSyncService.syncUserCalendar(user.getId());
+            Map<String, Integer> syncResult = calendarSyncService.syncUserCalendar(user.getId());
             int totalOutlookSchedules = calendarSyncService.getOutlookScheduleCount(user.getId());
+
+            int syncedCount = syncResult.getOrDefault("syncedCount", 0);
+            int updatedCount = syncResult.getOrDefault("updatedCount", 0);
+            int deletedCount = syncResult.getOrDefault("deletedCount", 0);
 
             Map<String, Object> result = Map.of(
                     "syncedCount", syncedCount,
+                    "updatedCount", updatedCount,
+                    "deletedCount", deletedCount,
                     "totalOutlookSchedules", totalOutlookSchedules
             );
 
+            // 동적 메시지 생성
+            StringBuilder message = new StringBuilder("일정 동기화 완료");
+            if (syncedCount > 0 || updatedCount > 0 || deletedCount > 0) {
+                message.append(" (");
+                boolean needComma = false;
+                if (syncedCount > 0) {
+                    message.append(syncedCount).append("개 추가");
+                    needComma = true;
+                }
+                if (updatedCount > 0) {
+                    if (needComma) message.append(", ");
+                    message.append(updatedCount).append("개 수정");
+                    needComma = true;
+                }
+                if (deletedCount > 0) {
+                    if (needComma) message.append(", ");
+                    message.append(deletedCount).append("개 삭제");
+                }
+                message.append(")");
+            }
+
             return ResponseEntity.ok(ApiResponse.success(
-                    syncedCount + "개의 일정이 동기화되었습니다",
+                    message.toString(),
                     result
             ));
         } catch (Exception e) {
