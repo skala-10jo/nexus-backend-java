@@ -11,13 +11,19 @@ import com.nexus.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.Tika;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import org.springframework.core.io.Resource;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.Map;
+import java.util.HashMap;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -57,6 +63,11 @@ public class FileService {
 
     // Services
     private final FileStorageService fileStorageService;
+    private final RestTemplate restTemplate;
+
+    // Configuration
+    @Value("${python.backend.url:http://localhost:8000}")
+    private String pythonBackendUrl;
 
     // Utils
     private final Tika tika = new Tika();
@@ -103,12 +114,43 @@ public class FileService {
 
             documentFileRepository.save(documentFile);
 
+            // Trigger async document processing (text extraction + AI summarization)
+            triggerDocumentProcessing(newFile.getId(), newFile.getFilePath());
+
             return mapToResponse(newFile, documentFile);
 
         } catch (Exception ex) {
             log.error("Failed to upload document", ex);
             throw new ServiceException("Failed to upload document", ex);
         }
+    }
+
+    /**
+     * Trigger document processing in Python backend.
+     * Extracts text and generates AI summary asynchronously.
+     *
+     * @param fileId   the file ID
+     * @param filePath the file path
+     */
+    private void triggerDocumentProcessing(UUID fileId, String filePath) {
+        CompletableFuture.runAsync(() -> {
+            try {
+                String pythonUrl = pythonBackendUrl + "/api/ai/documents/process";
+
+                Map<String, Object> request = new HashMap<>();
+                request.put("file_id", fileId.toString());
+                request.put("file_path", filePath);
+
+                log.info("Calling Python document processing API: fileId={}", fileId);
+                restTemplate.postForObject(pythonUrl, request, Map.class);
+                log.info("Document processing started successfully: fileId={}", fileId);
+
+            } catch (Exception e) {
+                log.error("Failed to trigger document processing: fileId={}, error={}",
+                        fileId, e.getMessage());
+                // Don't fail the upload - document processing is optional
+            }
+        });
     }
 
     /**

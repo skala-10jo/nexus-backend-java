@@ -48,6 +48,10 @@ public class DocumentFile {
     @Builder.Default
     private Boolean isAnalyzed = false;
 
+    // AI 문서 요약 (Python 백엔드에서 생성, 시나리오 생성에 활용)
+    @Column(name = "summary", columnDefinition = "TEXT")
+    private String summary;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -59,4 +63,11 @@ public class DocumentFile {
     // Note: DocumentContent는 기존 Document 구조와 연결되어 있으므로
     // 새로운 File 구조와는 직접 연결하지 않습니다.
     // 필요 시 DocumentContentRepository로 쿼리하여 조회할 수 있습니다.
+
+    /**
+     * 문서가 AI 처리되었는지 확인
+     */
+    public boolean isProcessed() {
+        return summary != null && !summary.isEmpty();
+    }
 }
