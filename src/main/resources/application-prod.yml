@@ -1,7 +1,7 @@
 spring:
   jpa:
     hibernate:
-      ddl-auto: validate  # Never auto-update schema in production
+      ddl-auto: ${JPA_DDL_AUTO:validate}  # Configurable via env var, defaults to validate
     show-sql: false
     properties:
       hibernate:
