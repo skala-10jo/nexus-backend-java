@@ -111,7 +111,7 @@ public class GlossaryService {
                         .fileId(fileId)
                         .filePath(fileEntity.getFilePath())
                         .fileContent(fileContent)
-                        .fileName(fileEntity.getOriginalName())
+                        .fileName(fileEntity.getOriginalFilename())
                         .userId(user.getId())
                         .projectId(projectId)
                         .build();
