@@ -23,6 +23,12 @@ public class PythonExtractionRequest {
     @JsonProperty("file_path")
     private String filePath;
 
+    @JsonProperty("file_content")
+    private String fileContent;
+
+    @JsonProperty("file_name")
+    private String fileName;
+
     @JsonProperty("user_id")
     private UUID userId;
 

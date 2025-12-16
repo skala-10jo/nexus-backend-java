@@ -23,6 +23,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Base64;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -38,6 +42,7 @@ public class GlossaryService {
     private final GlossaryTermRepository glossaryTermRepository;
     private final GlossaryExtractionJobRepository extractionJobRepository;
     private final FileRepository fileRepository;
+    private final FileStorageService fileStorageService;
     private final RestTemplate restTemplate;
 
     @Value("${python.backend.url:http://localhost:8000}")
@@ -78,20 +83,35 @@ public class GlossaryService {
 
         // Call Python API asynchronously
         final GlossaryExtractionJob savedJob = job;
+        final File fileEntity = file;
         CompletableFuture.runAsync(() -> {
             try {
                 String pythonUrl = pythonBackendUrl + "/api/ai/glossary/extract";
 
                 // Get first project if file has projects
                 UUID projectId = null;
-                if (file.getProjects() != null && !file.getProjects().isEmpty()) {
-                    projectId = file.getProjects().get(0).getId();
+                if (fileEntity.getProjects() != null && !fileEntity.getProjects().isEmpty()) {
+                    projectId = fileEntity.getProjects().get(0).getId();
+                }
+
+                // 파일 내용을 읽어서 Base64로 인코딩
+                String fileContent = null;
+                try {
+                    Path filePath = fileStorageService.getFilePath(fileEntity.getFilePath());
+                    byte[] fileBytes = Files.readAllBytes(filePath);
+                    fileContent = Base64.getEncoder().encodeToString(fileBytes);
+                    log.info("파일 읽기 완료: {} bytes", fileBytes.length);
+                } catch (IOException e) {
+                    log.error("파일 읽기 실패: {}", fileEntity.getFilePath(), e);
+                    throw new RuntimeException("용어 추출을 위한 파일 읽기 실패", e);
                 }
 
                 PythonExtractionRequest request = PythonExtractionRequest.builder()
                         .jobId(savedJob.getId())
                         .fileId(fileId)
-                        .filePath(file.getFilePath())
+                        .filePath(fileEntity.getFilePath())
+                        .fileContent(fileContent)
+                        .fileName(fileEntity.getOriginalName())
                         .userId(user.getId())
                         .projectId(projectId)
                         .build();
