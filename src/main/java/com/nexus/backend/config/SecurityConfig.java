@@ -36,7 +36,7 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/check-username", "/api/auth/check-email", "/api/health").permitAll()
-                        .requestMatchers("/ws/**", "/api/ws/**").permitAll()  // Allow WebSocket connections
+                        .requestMatchers("/ws/**").permitAll()  // Allow WebSocket connections
                         .requestMatchers("/api/slack/events").permitAll()  // Allow Slack Event API webhooks
                         .requestMatchers("/api/files/serve/**").permitAll()  // Allow public file serving (avatars, etc.)
                         .anyRequest().authenticated()
