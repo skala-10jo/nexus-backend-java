@@ -33,8 +33,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // WebSocket endpoint: ws://localhost:3000/ws
-        registry.addEndpoint("/ws")
+        // WebSocket endpoint: ws://localhost:3000/api/ws
+        // /api/* nginx 설정을 활용하기 위해 /api/ws 경로 사용
+        registry.addEndpoint("/api/ws")
                 .setAllowedOriginPatterns("*")  // CORS: allow all origins for dev
                 .withSockJS();  // Fallback for browsers without WebSocket support
     }
