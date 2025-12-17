@@ -90,6 +90,8 @@ jobs:
               -e SLACK_CLIENT_ID="${{ secrets.SLACK_CLIENT_ID }}" \
               -e SLACK_CLIENT_SECRET="${{ secrets.SLACK_CLIENT_SECRET }}" \
               -e SLACK_REDIRECT_URI="${{ secrets.SLACK_REDIRECT_URI }}" \
+              -e GRAPH_CLIENT_ID="${{ secrets.GRAPH_CLIENT_ID }}" \
+              -e GRAPH_TENANT_ID="${{ secrets.GRAPH_TENANT_ID }}" \
               ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:latest
 
             # Cleanup old images
