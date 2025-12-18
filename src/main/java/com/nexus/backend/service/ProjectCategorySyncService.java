@@ -231,8 +231,8 @@ public class ProjectCategorySyncService {
         try {
             syncing.set(true);
 
-            // 이미 동일한 이름의 프로젝트가 있는지 확인
-            if (projectRepository.existsByUserIdAndName(userId, categoryName)) {
+            // 이미 동일한 이름의 ACTIVE 프로젝트가 있는지 확인 (DELETED 제외)
+            if (projectRepository.existsByUserIdAndNameAndStatusNot(userId, categoryName, "DELETED")) {
                 log.debug("Project '{}' already exists, skipping creation", categoryName);
                 return;
             }
@@ -277,8 +277,8 @@ public class ProjectCategorySyncService {
         try {
             syncing.set(true);
 
-            // 기존 이름의 프로젝트 찾기
-            Optional<Project> projectOpt = projectRepository.findByUserIdAndName(userId, oldName);
+            // 기존 이름의 ACTIVE 프로젝트 찾기 (DELETED 제외)
+            Optional<Project> projectOpt = projectRepository.findByUserIdAndNameAndStatusNot(userId, oldName, "DELETED");
 
             if (projectOpt.isEmpty()) {
                 log.debug("Project '{}' not found, cannot update", oldName);
@@ -287,8 +287,8 @@ public class ProjectCategorySyncService {
 
             Project project = projectOpt.get();
 
-            // 새 이름으로 이미 다른 프로젝트가 있는지 확인
-            if (projectRepository.existsByUserIdAndName(userId, newName)) {
+            // 새 이름으로 이미 다른 ACTIVE 프로젝트가 있는지 확인 (DELETED 제외)
+            if (projectRepository.existsByUserIdAndNameAndStatusNot(userId, newName, "DELETED")) {
                 log.warn("Project '{}' already exists, cannot rename from '{}'", newName, oldName);
                 return;
             }
@@ -319,7 +319,8 @@ public class ProjectCategorySyncService {
         try {
             syncing.set(true);
 
-            Optional<Project> projectOpt = projectRepository.findByUserIdAndName(userId, categoryName);
+            // ACTIVE 프로젝트만 찾기 (DELETED 제외)
+            Optional<Project> projectOpt = projectRepository.findByUserIdAndNameAndStatusNot(userId, categoryName, "DELETED");
 
             if (projectOpt.isEmpty()) {
                 log.debug("Project '{}' not found, nothing to delete", categoryName);
