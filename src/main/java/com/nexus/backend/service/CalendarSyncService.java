@@ -271,9 +271,10 @@ public class CalendarSyncService {
                             (existing, replacement) -> existing
                     ));
 
-            // 프로젝트 캐싱 (이름으로 자동 매칭용)
+            // 프로젝트 캐싱 (이름으로 자동 매칭용) - DELETED 제외
             Map<String, Project> projectCache = projectRepository.findByUserId(user.getId())
                     .stream()
+                    .filter(p -> !"DELETED".equals(p.getStatus()))
                     .collect(Collectors.toMap(
                             Project::getName,
                             p -> p,
