@@ -39,6 +39,7 @@ public class SecurityConfig {
                         .requestMatchers("/ws/**", "/api/ws/**").permitAll()  // Allow WebSocket connections
                         .requestMatchers("/api/slack/events").permitAll()  // Allow Slack Event API webhooks
                         .requestMatchers("/api/files/serve/**").permitAll()  // Allow public file serving (avatars, etc.)
+                        .requestMatchers("/api/debug/**").permitAll()  // Debug endpoints (임시)
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
