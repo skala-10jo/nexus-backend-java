@@ -36,6 +36,7 @@ spring:
 
 server:
   port: ${SERVER_PORT:3000}
+  forward-headers-strategy: framework  # CloudFront/nginx 환경에서 원본 Origin 인식
   error:
     include-message: ${ERROR_INCLUDE_MESSAGE:never}
     include-stacktrace: ${ERROR_INCLUDE_STACKTRACE:never}
