@@ -37,6 +37,7 @@ public class CalendarSyncService {
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
     private final OutlookAuthService outlookAuthService;
+    private final ProjectCategorySyncService projectCategorySyncService;
 
     // Outlook 범주 색상 매핑 (preset 색상)
     private static final Map<String, String> OUTLOOK_COLOR_MAP = Map.ofEntries(
@@ -144,6 +145,9 @@ public class CalendarSyncService {
                     category.setName(outlookCategory.getDisplayName());
                     category.setColor(mapOutlookColor(outlookCategory.getColor()));
                     scheduleCategoryRepository.save(category);
+
+                    // 기존 카테고리에 대응하는 프로젝트가 없으면 생성
+                    projectCategorySyncService.onCategoryCreated(user.getId(), outlookCategory.getDisplayName());
                 } else {
                     // 이름으로 기존 범주 확인 (사용자가 직접 만든 같은 이름의 범주가 있을 수 있음)
                     Optional<ScheduleCategory> existingByName = scheduleCategoryRepository
@@ -156,6 +160,9 @@ public class CalendarSyncService {
                         category.setIsFromOutlook(true);
                         category.setColor(mapOutlookColor(outlookCategory.getColor()));
                         scheduleCategoryRepository.save(category);
+
+                        // 기존 카테고리에 대응하는 프로젝트가 없으면 생성
+                        projectCategorySyncService.onCategoryCreated(user.getId(), outlookCategory.getDisplayName());
                     } else {
                         // 새 범주 생성
                         ScheduleCategory newCategory = ScheduleCategory.builder()
@@ -169,6 +176,10 @@ public class CalendarSyncService {
                                 .build();
                         scheduleCategoryRepository.save(newCategory);
                         syncedCount++;
+
+                        // 카테고리 생성 시 동일 이름의 프로젝트 자동 생성
+                        projectCategorySyncService.onCategoryCreated(user.getId(), outlookCategory.getDisplayName());
+                        log.info("Auto-created project for Outlook category: {}", outlookCategory.getDisplayName());
                     }
                 }
             }
